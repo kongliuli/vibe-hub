@@ -97,3 +97,6 @@ VibeHub.sln                    # net10.0-windows
 | D5 | 注入用管理块合并 | 目标文件（如本机 `~/.codex/AGENTS.md` 8.7KB 手写内容）不可覆盖 |
 | D6 | Skills 全走 copy 不用 junction | Claude junction 多个未修 bug；Codex 旧路径跳过 symlink |
 | D7 | Trae 会话库判红放弃 | 两库文件头实测为随机字节（SQLCipher 类加密） |
+| D8 | **所有权反转：vault 为真源**，工具侧是投影/缓存 | 项目/工作区归 Hub；真归档 ingest 进 vault，换机/卸载不丢（见 [06-session-lifecycle.md](06-session-lifecycle.md)） |
+| D9 | Distiller 复用 headless CLI + 人审闸门 | 不自研 runtime；产物过审阅队列才落真源，防静默污染记忆 |
+| D10 | 跨工具迁移只做语义迁移 | 各家 transcript 互不兼容，raw 移植不承诺；蒸馏 handoff → 投影 → 新会话 |

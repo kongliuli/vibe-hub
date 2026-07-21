@@ -4,7 +4,13 @@
 
 ## 一句话
 
-自用的 Windows 桌面「AI coding agent 管理器」：一个 WPF 窗口内完成 **调度、归档、注入、Skills 管理** 四件事。
+自用的 Windows 桌面「AI coding agent 工作台」：**项目/工作区由 vibe-hub 负责（真源），分发给各 CLI 与工具只是临时租约**；一个 WPF 窗口内完成 调度、真归档、迁移、注入、Skills 管理与会话蒸馏。
+
+## 核心理念：所有权反转
+
+- Hub 是 system of record：项目、任务、记忆、归档、技能启用集都归 Hub 所有
+- 各 CLI/工具侧的状态（AGENTS.md 管理块、skills 目录、会话文件）都是 Hub 的**投影或临时缓存**，可随时重建
+- 会话生命周期：`Draft(备上下文) → Leased(租给 CLI 跑) → Harvested(收割进 vault) → Distilled(蒸馏) → Archived(冷存)`
 
 ## 背景与动机
 
@@ -41,11 +47,19 @@
 - **Structured pane**：**旁路读磁盘 transcript/DB**（不剥 ANSI 当主路径），渲染消息气泡 + 工具调用折叠；同一 job 下与 Terminal Tab 切换
 - Structured pane 输入可选写回 PTY；审批/picker 类交互回 Terminal
 
-### F3 归档（Archive，只读）
+### F3 真归档（Archive = ingest 进 vault，非只读镜像）
 
 - 统一 canonical 模型：`Project → Session → Message → ToolCall`
-- 第一批源（按本机勘察可行性排序）：OpenCode db（327 会话/9480 消息，明文）→ WorkBuddy memory.md → Kimi memory vault → Trae skills 库
+- **Ingest**：会话复制进 Hub 自己的 vault（raw 保真副本 + canonical 解析双层），工具卸载/清数据/换机后归档仍在；解析成功且消息数/哈希核对后才标记 Harvested
+- 第一批源（按本机勘察可行性排序）：OpenCode db（327 会话/9480 消息，明文）→ Codex/Claude JSONL → Cursor 捕获流 → WorkBuddy memory.md → Kimi memory vault → Trae skills 库
 - 加密源（Trae 两个 `database.db`）只展示元数据（存在/mtime/大小），UI 不承诺内容归档
+- 工具侧清理（可选，默认关）：仅清已核实 ingest 的文件型会话；加密源与共享 db 永不动
+
+### F3b 会话迁移
+
+- 同工具续跑：原生 resume 令牌
+- 同工具跨机：搬 vault + 原生数据文件（Codex/Claude jsonl 放回原路径可续 resume）
+- **跨工具：语义迁移**——蒸馏出 handoff/context → 注入投影 → 新工具开新会话（各家 transcript 互不兼容，不承诺 raw 移植）
 
 ### F4 注入（Inject）
 
@@ -59,12 +73,24 @@
 - 不用 `~/.agents/skills` 共享目录（跨读泄漏，无法按工具开关）
 - 启停 = 目录存在与否（Codex 可用 `[[skills.config]]` 禁用）
 
+### F6 支路 Distiller Agent（蒸馏）
+
+- **不自研 runtime**：复用一等 CLI 的 headless 模式（`codex exec` / `claude -p --output-format stream-json` / `opencode run`）跑 `distill` 类型后台 Job
+- 输入：Harvested 会话（单条或批量）；产出三类：
+  1. `summary.md` 精简会话（长会话压缩成可读交接）
+  2. memory/handoff 增量建议
+  3. SKILL.md 草案（从重复操作/教训中提炼）
+- **全部进审阅队列，人审批准后**才写入 inject 真源或技能中央库（草案默认不对任何工具启用）
+- 触发：手动（选中会话→蒸馏）+ 可选每日批量；显示 token 成本预估，可指定便宜模型
+
 ## 非目标
 
-- 云同步 / 多机 / 团队协作
+- 云同步 / 多机自动同步、团队协作（vault 本身是文件，可手动搬）
 - 解密任何加密数据库
 - 调度封闭 Work App 内部工作流
-- 自研 agent runtime；Pi 仅作注入范式参考
+- 跨工具的 raw transcript 移植（只做语义迁移）
+- 自研 agent runtime；Distiller 也只是 headless 调用现有 CLI；Pi 仅作注入范式参考
+- Distiller 产物绕过人审直接生效
 
 ## 成功标准（验收）
 
@@ -75,3 +101,5 @@
 5. Hub 写一段 handoff → 投影文件出现 → 新 CLI 会话能读到
 6. 装一个 skill → 仅对指定工具启用 → 目录可见性符合预期
 7. `dotnet test` 全程不弹真实终端/GUI
+8. 一条会话完成后可一键 Harvest 进 vault；删掉工具侧文件（模拟换机）后归档页仍能完整回放
+9. 选一条长会话 → 蒸馏 → 审阅队列出现 summary 与 handoff 建议 → 批准后投影 → 换一家 CLI 开新会话能接上下文（跨工具语义迁移闭环）
