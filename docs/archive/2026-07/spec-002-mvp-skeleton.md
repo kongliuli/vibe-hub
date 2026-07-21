@@ -1,5 +1,7 @@
 # spec-002：MVP 骨架
 
+> 已落地并归档 · 2026-07-21（代码：VibeHub.App / Core / Terminal；`dotnet test` 绿）
+
 > 编写模型: Claude Fable 5 (Cursor Agent) · 2026-07-21
 
 前置：spec-001 已定终端选型。目标：一个可日常自用的最小闭环——左栏选项目/任务，右侧内嵌终端跑 OpenCode/Codex，Structured pane 显示旁路 transcript，job 落 SQLite。
@@ -50,7 +52,7 @@ interface IProcessLauncher {                          // 单测唯一 mock 点
 
 ## 完成定义
 
-- [ ] 双 provider 可 start/resume，job 状态入库
-- [ ] Structured pane 显示真实历史会话
-- [ ] `dotnet test` 绿且无窗口弹出
-- [ ] 勾掉 PENDING P2，本 spec 归档
+- [x] 双 provider 可 start/resume，job 状态入库
+- [x] Structured pane 显示真实历史会话
+- [x] `dotnet test` 绿且无窗口弹出
+- [x] 勾掉 PENDING P2，本 spec 归档

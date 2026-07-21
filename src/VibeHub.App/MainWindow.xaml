@@ -1,0 +1,742 @@
+<Window x:Class="VibeHub.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:hc="https://handyorg.github.io/handycontrol"
+        Title="VIBE HUB"
+        Width="1560" Height="960"
+        MinWidth="1180" MinHeight="720"
+        Background="#0D1117"
+        Foreground="#E8EDF5"
+        FontFamily="Segoe UI">
+  <Window.Resources>
+    <SolidColorBrush x:Key="AppBackground" Color="#0D1117"/>
+    <SolidColorBrush x:Key="Surface" Color="#121720"/>
+    <SolidColorBrush x:Key="SurfaceRaised" Color="#171D28"/>
+    <SolidColorBrush x:Key="SurfaceHover" Color="#1C2432"/>
+    <SolidColorBrush x:Key="BorderBrush" Color="#283244"/>
+    <SolidColorBrush x:Key="TextPrimary" Color="#E8EDF5"/>
+    <SolidColorBrush x:Key="TextSecondary" Color="#93A0B4"/>
+    <SolidColorBrush x:Key="Accent" Color="#4F8CFF"/>
+    <SolidColorBrush x:Key="Success" Color="#4CC38A"/>
+    <SolidColorBrush x:Key="Warning" Color="#F2B84B"/>
+
+    <Style x:Key="ToolbarButton" TargetType="Button">
+      <Setter Property="Height" Value="32"/>
+      <Setter Property="MinWidth" Value="32"/>
+      <Setter Property="Padding" Value="10,0"/>
+      <Setter Property="Margin" Value="0,0,6,0"/>
+      <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+      <Setter Property="Background" Value="{StaticResource SurfaceHover}"/>
+      <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="Border" Padding="{TemplateBinding Padding}"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="5">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Border" Property="Background" Value="#243047"/>
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.45"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource ToolbarButton}">
+      <Setter Property="Background" Value="{StaticResource Accent}"/>
+      <Setter Property="BorderBrush" Value="{StaticResource Accent}"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style x:Key="RailButton" TargetType="Button">
+      <Setter Property="Width" Value="44"/>
+      <Setter Property="Height" Value="44"/>
+      <Setter Property="Margin" Value="4,3"/>
+      <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="FontSize" Value="18"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="RailBorder" Background="{TemplateBinding Background}" CornerRadius="5">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="RailBorder" Property="Background" Value="#1C2432"/>
+                <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="PanelBorder" TargetType="Border">
+      <Setter Property="Background" Value="{StaticResource SurfaceRaised}"/>
+      <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="6"/>
+      <Setter Property="Padding" Value="12"/>
+    </Style>
+
+    <Style x:Key="SectionTitle" TargetType="TextBlock">
+      <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+      <Setter Property="FontSize" Value="11"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Margin" Value="0,0,0,7"/>
+    </Style>
+
+    <Style TargetType="TextBox">
+      <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+      <Setter Property="Background" Value="#10151D"/>
+      <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+      <Setter Property="CaretBrush" Value="{StaticResource TextPrimary}"/>
+      <Setter Property="Padding" Value="8,5"/>
+    </Style>
+
+    <Style TargetType="ListBox">
+      <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+  </Window.Resources>
+
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="48"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="26"/>
+    </Grid.RowDefinitions>
+
+    <!-- App bar -->
+    <Border Grid.Row="0" Background="#0A0E14" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
+      <Grid Margin="14,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="170"/>
+          <ColumnDefinition Width="220"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+          <Border Width="26" Height="26" CornerRadius="5" Background="{StaticResource Accent}">
+            <TextBlock Text="V" FontWeight="Bold" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Border>
+          <TextBlock Text="VIBE HUB" Margin="10,0,0,0" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/>
+        </StackPanel>
+        <Border Grid.Column="1" Margin="0,7,12,7" Background="{StaticResource SurfaceRaised}"
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="5">
+          <TextBlock Text="{Binding WorkspaceName, StringFormat={}{0}  /  master}" Margin="12,0" VerticalAlignment="Center"/>
+        </Border>
+        <Border Grid.Column="2" MaxWidth="520" HorizontalAlignment="Center" Margin="0,7"
+                Background="#10151D" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="5">
+          <Grid>
+            <TextBlock Text="⌕" Margin="12,0,0,0" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+            <TextBlock Text="搜索项目、会话、Skills…     Ctrl+K" Margin="36,0,12,0"
+                       Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+          </Grid>
+        </Border>
+        <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+          <Button Style="{StaticResource RailButton}" Width="36" Height="34" Content="↻" ToolTip="刷新状态" Click="Refresh_OnClick" IsTabStop="False"/>
+          <Button Style="{StaticResource RailButton}" Width="36" Height="34" Content="●" ToolTip="通知" IsTabStop="False"/>
+          <Button Style="{StaticResource RailButton}" Width="36" Height="34" Content="⚙" ToolTip="设置"
+                  Tag="settings" Click="Navigate_OnClick" IsTabStop="False"/>
+          <Border Width="28" Height="28" Margin="8,0,0,0" CornerRadius="14" Background="#243047">
+            <TextBlock Text="Y" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>
+          </Border>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="54"/>
+        <ColumnDefinition Width="326"/>
+        <ColumnDefinition Width="5"/>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="5"/>
+        <ColumnDefinition Width="330"/>
+      </Grid.ColumnDefinitions>
+
+      <!-- Navigation rail -->
+      <Border Grid.Column="0" Background="#0A0E14" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Top" Margin="0,7,0,0">
+            <Button x:Name="WorkbenchNavButton" Style="{StaticResource RailButton}" Content="▦" ToolTip="工作台"
+                    Tag="workbench" Click="Navigate_OnClick"/>
+            <Button x:Name="ProjectsNavButton" Style="{StaticResource RailButton}" Content="▱" ToolTip="项目"
+                    Tag="projects" Click="Navigate_OnClick"/>
+            <Button x:Name="AgentsNavButton" Style="{StaticResource RailButton}" Content="◉" ToolTip="Agent"
+                    Tag="agents" Click="Navigate_OnClick"/>
+            <Button x:Name="SessionsNavButton" Style="{StaticResource RailButton}" Content="▤" ToolTip="会话"
+                    Tag="sessions" Click="Navigate_OnClick"/>
+            <Button x:Name="VaultNavButton" Style="{StaticResource RailButton}" Content="◇" ToolTip="Vault"
+                    Tag="vault" Click="Navigate_OnClick"/>
+            <Button x:Name="MemoryNavButton" Style="{StaticResource RailButton}" Content="▥" ToolTip="Memory"
+                    Tag="memory" Click="Navigate_OnClick"/>
+            <Button x:Name="SkillsNavButton" Style="{StaticResource RailButton}" Content="⚖" ToolTip="Skills"
+                    Tag="skills" Click="Navigate_OnClick"/>
+            <Button Style="{StaticResource RailButton}" Content="☷" ToolTip="审阅" Click="ReviewQueue_OnClick"/>
+          </StackPanel>
+          <StackPanel DockPanel.Dock="Bottom" Margin="0,0,0,8">
+            <Button x:Name="SettingsNavButton" Style="{StaticResource RailButton}" Content="⚙" ToolTip="设置"
+                    Tag="settings" Click="Navigate_OnClick"/>
+            <Border Width="18" Height="18" CornerRadius="9" Background="#19362B" BorderBrush="#4CC38A" BorderThickness="1">
+              <Ellipse Width="6" Height="6" Fill="#4CC38A"/>
+            </Border>
+          </StackPanel>
+        </DockPanel>
+      </Border>
+
+      <!-- Project / tasks / real dispatch -->
+      <Border Grid.Column="1" Background="{StaticResource Surface}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Margin="14,12">
+            <Grid Margin="0,0,0,10">
+              <TextBlock Text="项目与任务" FontSize="16" FontWeight="SemiBold"/>
+              <hc:Tag HorizontalAlignment="Right" Content="Mock + Real" Foreground="#AFC8FF" Background="#17315D"/>
+            </Grid>
+
+            <TextBlock Style="{StaticResource SectionTitle}" Text="工作目录 · REAL"/>
+            <DockPanel Margin="0,0,0,12">
+              <Button DockPanel.Dock="Right" Style="{StaticResource ToolbarButton}" Content="…" Width="32" Click="BrowseCwd_OnClick"/>
+              <TextBox x:Name="CwdBox" Height="32"/>
+            </DockPanel>
+
+            <TextBlock Style="{StaticResource SectionTitle}" Text="项目树 · REAL（一级）"/>
+            <Border Style="{StaticResource PanelBorder}" Padding="10" Margin="0,0,0,14">
+              <ItemsControl ItemsSource="{Binding ProjectEntries}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <StackPanel Orientation="Horizontal" Margin="0,3">
+                      <TextBlock Text="›" Foreground="{StaticResource TextSecondary}" Margin="0,0,7,0"/>
+                      <TextBlock Text="{Binding Name}" Foreground="#C7D0DE" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </Border>
+
+            <TextBlock Style="{StaticResource SectionTitle}" Text="当前任务 · REAL"/>
+            <TextBlock x:Name="TaskEmptyText" Text="HubStore 中暂无任务" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,8"/>
+            <ItemsControl ItemsSource="{Binding Tasks}" Margin="0,0,0,14">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border Style="{StaticResource PanelBorder}" Padding="10" Margin="0,0,0,6">
+                    <StackPanel>
+                      <Grid>
+                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                          <TextBlock Text="{Binding Status}" VerticalAlignment="Center" Foreground="{StaticResource TextSecondary}"/>
+                          <Button Style="{StaticResource ToolbarButton}" Content="推进" Margin="8,0,0,0"
+                                  Tag="{Binding Id}" Click="AdvanceTask_OnClick"/>
+                        </StackPanel>
+                      </Grid>
+                      <TextBlock Text="{Binding Notes}" Foreground="{StaticResource TextSecondary}" TextWrapping="Wrap" Margin="0,5,0,0"/>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <TextBlock Style="{StaticResource SectionTitle}" Text="Agent 调度 · REAL"/>
+            <ComboBox x:Name="ProviderBox" Height="32" Margin="0,0,0,7">
+              <ComboBoxItem Content="opencode" IsSelected="True"/>
+              <ComboBoxItem Content="codex"/>
+              <ComboBoxItem Content="claude"/>
+              <ComboBoxItem Content="cursor-agent"/>
+            </ComboBox>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+              <Button Style="{StaticResource PrimaryButton}" Content="Start" Click="Start_OnClick" IsTabStop="False"/>
+              <Button Style="{StaticResource ToolbarButton}" Content="Resume" Click="Resume_OnClick" IsTabStop="False"/>
+              <Button Style="{StaticResource ToolbarButton}" Content="Kill" Click="Kill_OnClick" IsTabStop="False"/>
+            </StackPanel>
+
+            <TextBlock Style="{StaticResource SectionTitle}" Text="归档源与条目 · REAL"/>
+            <ComboBox x:Name="ArchiveSourceBox" Height="32" Margin="0,0,0,7" DisplayMemberPath="DisplayName"
+                      SelectionChanged="ArchiveSourceBox_OnSelectionChanged"/>
+            <ListBox x:Name="SessionList" Height="150" DisplayMemberPath="Title"
+                     SelectionChanged="SessionList_OnSelectionChanged"/>
+
+            <TextBlock Style="{StaticResource SectionTitle}" Text="运行中的 Jobs · REAL" Margin="0,12,0,7"/>
+            <ListBox x:Name="JobList" Height="86" DisplayMemberPath="Display"
+                     SelectionChanged="JobList_OnSelectionChanged"/>
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+
+      <GridSplitter Grid.Column="2" Width="5" HorizontalAlignment="Stretch" Background="#0D1117"/>
+
+      <!-- Main workbench -->
+      <Grid Grid.Column="3" Margin="18,14,18,10">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Margin="0,0,0,12">
+          <StackPanel>
+            <TextBlock Text="会话  /  当前工作区" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+            <TextBlock Text="会话工作台" FontSize="24" FontWeight="SemiBold" Margin="0,5,0,0"/>
+            <TextBlock Text="终端、结构化记录与上下文迁移" Foreground="{StaticResource TextSecondary}" Margin="0,3,0,0"/>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom">
+            <Button Style="{StaticResource PrimaryButton}" Content="新建任务" Tag="projects" Click="Navigate_OnClick"/>
+            <Button Style="{StaticResource ToolbarButton}" Content="审阅队列" Click="ReviewQueue_OnClick"/>
+            <Button Style="{StaticResource ToolbarButton}" Content="迁移" Click="Migrate_OnClick"/>
+          </StackPanel>
+        </Grid>
+
+        <Border Grid.Row="1" Style="{StaticResource PanelBorder}" Padding="10,8" Margin="0,0,0,10">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto"/>
+              <ColumnDefinition Width="Auto"/>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Border Grid.Column="0" Padding="9,4" Background="#10151D" CornerRadius="4" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+              <TextBlock Text="{Binding ElementName=ProviderBox, Path=SelectedItem.Content}" FontWeight="SemiBold"/>
+            </Border>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="12,0" VerticalAlignment="Center">
+              <Ellipse x:Name="ActiveJobIndicator" Width="7" Height="7" Fill="{StaticResource TextSecondary}"/>
+              <TextBlock x:Name="ActiveJobStatusText" Text=" 无活动 Job" Foreground="{StaticResource TextSecondary}"/>
+            </StackPanel>
+            <TextBlock Grid.Column="2" Text="{Binding ElementName=CwdBox, Path=Text}" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+            <Button Grid.Column="3" Style="{StaticResource ToolbarButton}" Content="聚焦终端" Click="TerminalFocus_OnClick" IsTabStop="False"/>
+          </Grid>
+        </Border>
+
+        <TabControl x:Name="WorkbenchTabs" Grid.Row="2" Background="Transparent" BorderBrush="{StaticResource BorderBrush}"
+                    KeyboardNavigation.ControlTabNavigation="None" KeyboardNavigation.DirectionalNavigation="None">
+          <TabControl.Resources>
+            <Style TargetType="TabItem">
+              <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+              <Setter Property="Background" Value="Transparent"/>
+              <Setter Property="Padding" Value="14,7"/>
+              <Setter Property="IsTabStop" Value="False"/>
+            </Style>
+          </TabControl.Resources>
+
+          <TabItem x:Name="StructuredTab" Header="结构化" IsSelected="True">
+            <Grid Margin="0,10,0,0">
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+              </Grid.RowDefinitions>
+              <ItemsControl Grid.Row="0" ItemsSource="{Binding Activity}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border Style="{StaticResource PanelBorder}" Margin="0,0,0,7" Padding="12,9">
+                      <Grid>
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="120"/>
+                          <ColumnDefinition Width="*"/>
+                          <ColumnDefinition Width="70"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" Foreground="#B9CAE5"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Detail}" Foreground="{StaticResource TextSecondary}" TextWrapping="Wrap"/>
+                        <TextBlock Grid.Column="2" Text="{Binding Time}" HorizontalAlignment="Right" Foreground="#657287" FontSize="11"/>
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <Border Grid.Row="1" Style="{StaticResource PanelBorder}" Margin="0,3,0,0" Padding="0">
+                <DockPanel>
+                  <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10,8">
+                    <TextBlock Text="真实结构化会话" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    <TextBlock Text="  · 选择左侧归档条目" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                    <Button Style="{StaticResource ToolbarButton}" Content="打开目录" Margin="12,0,6,0" Click="OpenEntryFolder_OnClick"/>
+                    <Button Style="{StaticResource ToolbarButton}" Content="Harvest" Click="Harvest_OnClick"/>
+                    <Button Style="{StaticResource ToolbarButton}" Content="Distill" Click="Distill_OnClick"/>
+                  </StackPanel>
+                  <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="10,0,10,10">
+                    <ItemsControl x:Name="MessageList">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <Border Margin="0,0,0,8" Padding="10,8" CornerRadius="5" Background="{Binding BubbleBrush}">
+                            <StackPanel>
+                              <TextBlock Text="{Binding RoleLabel}" FontSize="10" Foreground="#93A0B4" Margin="0,0,0,4"/>
+                              <TextBlock Text="{Binding Content}" TextWrapping="Wrap" Foreground="#E8EDF5"/>
+                            </StackPanel>
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </ScrollViewer>
+                </DockPanel>
+              </Border>
+            </Grid>
+          </TabItem>
+
+          <TabItem x:Name="TerminalTab" Header="终端">
+            <Border x:Name="TerminalHost" Margin="0,10,0,0" Background="#080B10" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                    PreviewMouseDown="TerminalHost_OnPreviewMouseDown"/>
+          </TabItem>
+
+          <TabItem Header="变更 · REAL">
+            <StackPanel Margin="0,10,0,0">
+              <TextBlock x:Name="ChangesEmptyText" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,8"/>
+              <ItemsControl ItemsSource="{Binding Changes}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border Style="{StaticResource PanelBorder}" Margin="0,0,0,7">
+                      <Grid>
+                        <TextBlock Text="{Binding Path}"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                          <TextBlock Text="{Binding Added}" Foreground="{StaticResource Success}" Margin="0,0,12,0"/>
+                          <TextBlock Text="{Binding Removed}" Foreground="#F06A6A"/>
+                        </StackPanel>
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </TabItem>
+
+          <TabItem Header="Vault">
+            <StackPanel Margin="0,10,0,0">
+              <TextBlock Text="Vault 全文检索" FontSize="16" FontWeight="SemiBold"/>
+              <TextBlock Text="搜索已经 Harvest 的 canonical messages。" Foreground="{StaticResource TextSecondary}" Margin="0,4,0,12"/>
+              <DockPanel MaxWidth="640" HorizontalAlignment="Left">
+                <Button DockPanel.Dock="Right" Style="{StaticResource PrimaryButton}" Content="搜索" Click="VaultSearch_OnClick"/>
+                <TextBox x:Name="VaultSearchBox" Width="520" Height="32"/>
+              </DockPanel>
+            </StackPanel>
+          </TabItem>
+        </TabControl>
+
+        <Border Grid.Row="3" Style="{StaticResource PanelBorder}" Margin="0,10,0,0" Padding="10">
+          <Grid>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="48"/>
+            </Grid.RowDefinitions>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,7">
+              <Border Padding="8,3" Background="#10151D" CornerRadius="4" Margin="0,0,6,0"><TextBlock Text="@ 当前项目" FontSize="11"/></Border>
+              <Border Padding="8,3" Background="#10151D" CornerRadius="4" Margin="0,0,6,0"><TextBlock Text="# handoff" FontSize="11"/></Border>
+              <Border Padding="8,3" Background="#10151D" CornerRadius="4"><TextBlock Text="Skill: aspnet-core · Mock" FontSize="11"/></Border>
+            </StackPanel>
+            <Grid Grid.Row="1">
+              <TextBox Text="给 Agent 发送指令…（输入链路待接入）" Foreground="{StaticResource TextSecondary}" Padding="10"/>
+              <Button Style="{StaticResource PrimaryButton}" Content="➤" Width="42" HorizontalAlignment="Right" Margin="0,7,7,7" IsEnabled="False"/>
+            </Grid>
+          </Grid>
+        </Border>
+      </Grid>
+
+      <GridSplitter Grid.Column="4" Width="5" HorizontalAlignment="Stretch" Background="#0D1117"/>
+
+      <!-- Context inspector -->
+      <Border Grid.Column="5" Background="{StaticResource Surface}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1,0,0,0">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Margin="14,12">
+            <Grid Margin="0,0,0,12">
+              <TextBlock Text="任务上下文" FontSize="16" FontWeight="SemiBold"/>
+              <hc:Tag HorizontalAlignment="Right" Content="Inspector" Foreground="#AFC8FF" Background="#17315D"/>
+            </Grid>
+
+            <Border Style="{StaticResource PanelBorder}" Margin="0,0,0,8">
+              <StackPanel>
+                <TextBlock Style="{StaticResource SectionTitle}" Text="上下文 · MOCK"/>
+                <Grid>
+                  <TextBlock Text="Token 使用"/>
+                  <TextBlock Text="48%" Foreground="#67DDD0" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+                </Grid>
+                <ProgressBar Height="4" Margin="0,8,0,10" Maximum="100" Value="{Binding ContextUsage, Mode=OneWay}" Foreground="#42D3C7" Background="#263043"/>
+                <WrapPanel>
+                  <Border Padding="7,3" Background="#10151D" CornerRadius="4" Margin="0,0,5,5"><TextBlock Text="AGENTS.md" FontSize="11"/></Border>
+                  <Border Padding="7,3" Background="#10151D" CornerRadius="4" Margin="0,0,5,5"><TextBlock Text="README.md" FontSize="11"/></Border>
+                  <Border Padding="7,3" Background="#10151D" CornerRadius="4" Margin="0,0,5,5"><TextBlock Text="6 files" FontSize="11"/></Border>
+                </WrapPanel>
+              </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource PanelBorder}" Margin="0,0,0,8">
+              <StackPanel>
+                <Grid Margin="0,0,0,8">
+                  <TextBlock Style="{StaticResource SectionTitle}" Text="MEMORY 与 HANDOFF · REAL"/>
+                  <ToggleButton HorizontalAlignment="Right" IsChecked="True" Width="34" Height="18" IsEnabled="False" ToolTip="展示态；真实开关待接入"/>
+                </Grid>
+                <TextBlock Text="projectId" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                <TextBox x:Name="InjectProjectBox" Height="30" Margin="0,3,0,8" IsReadOnly="True"/>
+                <TextBlock Text="memory.md" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                <TextBox x:Name="InjectMemoryBox" Height="68" Margin="0,3,0,8" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
+                <TextBlock Text="handoff.md" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                <TextBox x:Name="InjectHandoffBox" Height="62" Margin="0,3,0,8" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
+                <WrapPanel>
+                  <Button Style="{StaticResource PrimaryButton}" Content="保存 Sink" Click="InjectSave_OnClick"/>
+                  <Button Style="{StaticResource ToolbarButton}" Content="→ OpenCode" Click="InjectProjectOpenCode_OnClick"/>
+                  <Button Style="{StaticResource ToolbarButton}" Content="→ Codex" Click="InjectProjectCodex_OnClick"/>
+                  <Button Style="{StaticResource ToolbarButton}" Content="拆除" Click="InjectToggleOff_OnClick"/>
+                </WrapPanel>
+                <TextBlock x:Name="InjectStatus" Foreground="{StaticResource Success}" TextWrapping="Wrap" Margin="0,7,0,0"/>
+              </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource PanelBorder}">
+              <StackPanel>
+                <TextBlock Style="{StaticResource SectionTitle}" Text="归档策略"/>
+                <Grid>
+                  <TextBlock Text="退出后自动 Harvest"/>
+                  <TextBlock Text="已启用" Foreground="{StaticResource Success}" HorizontalAlignment="Right"/>
+                </Grid>
+                <Grid Margin="0,8,0,0">
+                  <TextBlock Text="Vault 状态"/>
+                  <TextBlock Text="● Healthy" Foreground="{StaticResource Success}" HorizontalAlignment="Right"/>
+                </Grid>
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+
+      <!-- Independent feature pages; keep Agent and Skills out of session context. -->
+      <Grid x:Name="FeaturePageHost" Grid.Column="1" Grid.ColumnSpan="5" Panel.ZIndex="20"
+            Background="{StaticResource AppBackground}" Visibility="Collapsed">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="86"/>
+          <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="#0F141C" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
+          <StackPanel Margin="28,16,28,12">
+            <TextBlock x:Name="FeaturePageEyebrow" Text="VIBE HUB" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+            <TextBlock x:Name="FeaturePageTitle" Text="页面" FontSize="24" FontWeight="SemiBold" Margin="0,4,0,0"/>
+            <TextBlock x:Name="FeaturePageSubtitle" Foreground="{StaticResource TextSecondary}" Margin="0,2,0,0"/>
+          </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="1">
+          <ScrollViewer x:Name="ProjectsPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="28,22" MaxWidth="1040" HorizontalAlignment="Left">
+              <Grid Margin="0,0,0,16">
+                <TextBlock Text="HubStore 项目" FontSize="17" FontWeight="SemiBold"/>
+                <hc:Tag HorizontalAlignment="Right" Content="REAL" Foreground="#A8E8C9" Background="#19362B"/>
+              </Grid>
+              <Border Style="{StaticResource PanelBorder}" Margin="0,0,0,16" Padding="14">
+                <StackPanel>
+                  <TextBlock Text="新建当前项目任务" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                  <TextBox x:Name="TaskTitleBox" Height="34" Margin="0,0,0,8" ToolTip="任务标题"/>
+                  <TextBox x:Name="TaskNotesBox" MinHeight="58" AcceptsReturn="True" TextWrapping="Wrap"
+                           VerticalScrollBarVisibility="Auto" Margin="0,0,0,10" ToolTip="任务备注（可选）"/>
+                  <Button Style="{StaticResource PrimaryButton}" Content="创建任务" HorizontalAlignment="Left"
+                          Click="AddTask_OnClick"/>
+                </StackPanel>
+              </Border>
+              <ItemsControl ItemsSource="{Binding Projects}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border Style="{StaticResource PanelBorder}" Margin="0,0,0,8" Padding="14">
+                      <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <StackPanel>
+                          <TextBlock Text="{Binding DisplayName}" FontSize="15" FontWeight="SemiBold"/>
+                          <TextBlock Text="{Binding RootPath}" Foreground="{StaticResource TextSecondary}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" Content="打开"
+                                Tag="{Binding Id}" Click="UseProject_OnClick"/>
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </ScrollViewer>
+
+          <ScrollViewer x:Name="AgentsPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="28,22" MaxWidth="1040" HorizontalAlignment="Left">
+              <Border Style="{StaticResource PanelBorder}" Margin="0,0,0,18" Padding="16">
+                <StackPanel>
+                  <Grid Margin="0,0,0,12">
+                    <StackPanel>
+                      <TextBlock Text="任务调度" FontSize="17" FontWeight="SemiBold"/>
+                      <TextBlock Text="真实调用 OpenCode headless run；当前仅开放 OpenCode 默认智能体与 Sisyphus。"
+                                 Foreground="{StaticResource TextSecondary}" Margin="0,4,0,0"/>
+                    </StackPanel>
+                    <hc:Tag HorizontalAlignment="Right" VerticalAlignment="Top" Content="REAL" Foreground="#A8E8C9" Background="#19362B"/>
+                  </Grid>
+                  <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="220"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <StackPanel>
+                      <TextBlock Style="{StaticResource SectionTitle}" Text="执行模式"/>
+                      <ComboBox x:Name="AgentTaskAgentBox" Height="34">
+                        <ComboBoxItem Content="直接模型" Tag="" IsSelected="True"/>
+                        <ComboBoxItem Content="Sisyphus" Tag="Sisyphus - ultraworker"/>
+                      </ComboBox>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                      <TextBlock Style="{StaticResource SectionTitle}" Text="工作目录"/>
+                      <TextBox x:Name="AgentTaskCwdBox" Height="34"/>
+                    </StackPanel>
+                  </Grid>
+                  <TextBlock Style="{StaticResource SectionTitle}" Text="模型覆盖（OpenCode provider/model）"/>
+                  <TextBox x:Name="AgentTaskModelBox" Height="34" Margin="0,0,0,10"/>
+                  <TextBlock Style="{StaticResource SectionTitle}" Text="任务"/>
+                  <TextBox x:Name="AgentTaskPromptBox" MinHeight="74" AcceptsReturn="True" TextWrapping="Wrap"
+                           VerticalScrollBarVisibility="Auto" Margin="0,0,0,10"
+                           Text="只读检查 docs/PENDING.md，列出最优先的 3 个未完成事项及理由；不要修改任何文件。"/>
+                  <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                    <Button x:Name="AgentTaskRunButton" Style="{StaticResource PrimaryButton}" Content="运行任务" Click="RunAgentTask_OnClick"/>
+                    <Button x:Name="AgentTaskCancelButton" Style="{StaticResource ToolbarButton}" Content="取消" Click="CancelAgentTask_OnClick" IsEnabled="False"/>
+                    <TextBlock x:Name="AgentTaskStatus" VerticalAlignment="Center" Foreground="{StaticResource TextSecondary}" Margin="8,0,0,0"/>
+                  </StackPanel>
+                  <TextBox x:Name="AgentTaskOutputBox" MinHeight="110" MaxHeight="260" IsReadOnly="True" AcceptsReturn="True"
+                           TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" FontFamily="Cascadia Mono" FontSize="12"
+                           Text="任务输出将在这里显示。"/>
+                </StackPanel>
+              </Border>
+              <Grid Margin="0,0,0,16">
+                <TextBlock Text="已接入的 Agent CLI" FontSize="17" FontWeight="SemiBold"/>
+                <hc:Tag HorizontalAlignment="Right" Content="REAL" Foreground="#A8E8C9" Background="#19362B"/>
+              </Grid>
+              <ItemsControl ItemsSource="{Binding Agents}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border Style="{StaticResource PanelBorder}" Margin="0,0,0,8" Padding="14">
+                      <Grid>
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="48"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Width="36" Height="36" CornerRadius="6" Background="#17315D">
+                          <TextBlock Text="{Binding Name, Mode=OneWay}" TextTrimming="CharacterEllipsis"
+                                     FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="24"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" Margin="12,0">
+                          <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding Status, StringFormat={}{0}  ·  }" Foreground="{Binding StatusColor}"
+                                       Margin="12,0,0,0"/>
+                          </StackPanel>
+                          <TextBlock Text="{Binding Description}" Foreground="{StaticResource TextSecondary}" Margin="0,4,0,0"/>
+                        </StackPanel>
+                        <Button Grid.Column="2" Style="{StaticResource PrimaryButton}" Content="打开会话"
+                                Tag="{Binding ProviderId}" Click="UseAgent_OnClick"/>
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </ScrollViewer>
+
+          <ScrollViewer x:Name="SkillsPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="28,22" MaxWidth="1040" HorizontalAlignment="Left">
+              <Grid Margin="0,0,0,16">
+                <StackPanel>
+                  <TextBlock Text="受管 Skills" FontSize="17" FontWeight="SemiBold"/>
+                  <TextBlock Text="这里仅展示 manifest 中真实登记的 Skill；安装、启停与漂移修复将在本页完成。"
+                             Foreground="{StaticResource TextSecondary}" Margin="0,5,0,0"/>
+                </StackPanel>
+                <hc:Tag HorizontalAlignment="Right" VerticalAlignment="Top" Content="READ ONLY" Foreground="#F6D18A" Background="#3A2C16"/>
+              </Grid>
+              <Border Style="{StaticResource PanelBorder}" Margin="0,0,0,10">
+                <TextBlock Text="若列表为空，表示 Vibe Hub 尚未管理任何 Skill；不会用演示条目伪装成功。"
+                           Foreground="{StaticResource TextSecondary}"/>
+              </Border>
+              <ItemsControl ItemsSource="{Binding Skills}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border Style="{StaticResource PanelBorder}" Margin="0,0,0,8">
+                      <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="220"/><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="100"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Source}" Foreground="{StaticResource TextSecondary}" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Grid.Column="2" Text="{Binding Targets}" Foreground="#AFC8FF"/>
+                        <TextBlock Grid.Column="3" Text="{Binding Status}" HorizontalAlignment="Right" Foreground="{StaticResource Success}"/>
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </ScrollViewer>
+
+          <ScrollViewer x:Name="SettingsPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="28,22" MaxWidth="760" HorizontalAlignment="Left">
+              <Border Style="{StaticResource PanelBorder}" Margin="0,0,0,12" Padding="16">
+                <StackPanel>
+                  <TextBlock Text="默认会话" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,14"/>
+                  <TextBlock Style="{StaticResource SectionTitle}" Text="默认 Provider"/>
+                  <ComboBox x:Name="SettingsProviderBox" Height="34" Margin="0,0,0,12">
+                    <ComboBoxItem Content="opencode"/><ComboBoxItem Content="codex"/>
+                    <ComboBoxItem Content="claude"/><ComboBoxItem Content="cursor-agent"/>
+                  </ComboBox>
+                  <TextBlock Style="{StaticResource SectionTitle}" Text="默认工作目录"/>
+                  <TextBox x:Name="SettingsCwdBox" Height="34" Margin="0,0,0,12"/>
+                  <CheckBox x:Name="SettingsAutoFocusBox" Content="新 Job 创建后自动打开并聚焦终端" Margin="0,3,0,0"/>
+                </StackPanel>
+              </Border>
+              <Border Style="{StaticResource PanelBorder}" Margin="0,0,0,12" Padding="16">
+                <StackPanel>
+                  <TextBlock Text="OpenCode 任务" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,14"/>
+                  <TextBlock Style="{StaticResource SectionTitle}" Text="默认执行模式"/>
+                  <ComboBox x:Name="SettingsAgentTaskAgentBox" Height="34" Margin="0,0,0,12">
+                    <ComboBoxItem Content="直接模型" Tag=""/>
+                    <ComboBoxItem Content="Sisyphus" Tag="Sisyphus - ultraworker"/>
+                  </ComboBox>
+                  <TextBlock Style="{StaticResource SectionTitle}" Text="默认 provider/model"/>
+                  <TextBox x:Name="SettingsAgentTaskModelBox" Height="34"/>
+                </StackPanel>
+              </Border>
+              <Border Style="{StaticResource PanelBorder}" Margin="0,0,0,12" Padding="16">
+                <StackPanel>
+                  <TextBlock Text="数据与隐私" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                  <TextBlock Text="设置保存在 %LOCALAPPDATA%\vibe-hub\settings.json。归档源只读；Mock 操作不会写用户文件。"
+                             Foreground="{StaticResource TextSecondary}" TextWrapping="Wrap"/>
+                </StackPanel>
+              </Border>
+              <StackPanel Orientation="Horizontal">
+                <Button Style="{StaticResource PrimaryButton}" Content="保存设置" Click="SaveSettings_OnClick"/>
+                <TextBlock x:Name="SettingsStatus" VerticalAlignment="Center" Foreground="{StaticResource Success}" Margin="10,0,0,0"/>
+              </StackPanel>
+            </StackPanel>
+          </ScrollViewer>
+
+          <Grid x:Name="PlaceholderPage" Visibility="Collapsed" Margin="28,22">
+            <Border Style="{StaticResource PanelBorder}" MaxWidth="760" MaxHeight="170" HorizontalAlignment="Left" VerticalAlignment="Top" Padding="18">
+              <StackPanel>
+                <TextBlock x:Name="PlaceholderTitle" FontSize="17" FontWeight="SemiBold"/>
+                <TextBlock x:Name="PlaceholderBody" Foreground="{StaticResource TextSecondary}" TextWrapping="Wrap" Margin="0,8,0,14"/>
+                <Button Style="{StaticResource PrimaryButton}" Content="返回会话工作台" Tag="sessions" Click="Navigate_OnClick" HorizontalAlignment="Left"/>
+              </StackPanel>
+            </Border>
+          </Grid>
+        </Grid>
+      </Grid>
+    </Grid>
+
+    <!-- Status bar -->
+    <Border Grid.Row="2" Background="#0A0E14" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
+      <Grid Margin="10,0">
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+          <TextBlock x:Name="GitBranchStatus" Text="⌘  Git 检测中" Margin="0,0,16,0"/>
+          <TextBlock x:Name="GitChangesStatus" Text="●  变更检测中" Foreground="{StaticResource Warning}" Margin="0,0,16,0"/>
+          <TextBlock Text=".NET 10" Margin="0,0,16,0"/>
+          <TextBlock Text="●  测试状态 · Mock" Foreground="{StaticResource TextSecondary}"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+          <TextBlock x:Name="StructuredStatus" Text="Vault Healthy" Foreground="{StaticResource TextSecondary}" TextTrimming="CharacterEllipsis" MaxWidth="420"/>
+          <TextBlock Text="   ·   UTF-8   ·   MVVM + HandyControl" Foreground="{StaticResource TextSecondary}"/>
+        </StackPanel>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

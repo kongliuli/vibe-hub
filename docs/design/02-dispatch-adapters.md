@@ -73,7 +73,16 @@
 | 整会话导出 | `opencode export <sessionId>` |
 | 直查库 | `opencode db "<SQL>"` |
 
-### Transcript（实测 schema）
+**Spawn 必带环境变量**（否则 TUI Restart 后更新提示挡操作、Esc 也绕不过）：
+
+| 变量 | 值 | 作用 |
+|---|---|---|
+| `OPENCODE_DISABLE_AUTOUPDATE` | `true` | 关掉启动更新检查/提示（解析为 boolean；`"1"` 也可） |
+| `OPENCODE_DISABLE_MODELS_FETCH` | `1` | 减少启动时 models 拉取 |
+
+Adapter：`OpenCodeAdapter.LaunchEnvironment` → `ProcessStartSpec.Environment` → EWTC `cmd set … && opencode`。
+
+### transcript（实测 schema）
 
 路径：`~\.local\share\opencode\opencode.db`（本机 ~1GB；注意不在 AppData）。
 
@@ -86,7 +95,17 @@
 
 ## 4. Cursor agent
 
-### spawn/resume（本机未装；安装 `irm 'https://cursor.com/install?win32=true' | iex`）
+### 安装（本机 2026-07-21 仍未装）
+
+```powershell
+irm 'https://cursor.com/install?win32=true' | iex
+# 装完确认：
+agent --version
+```
+
+代码：`CursorAgentAdapter`（`ProviderId=cursor-agent`）。`Discover()` 为 false 时 Start/Resume 抛出带上述安装提示的异常；Archive 源 `cursor-agent` 可读 `~/.cursor/projects/**/agent-transcripts/*.jsonl`（常 REDACTED）。
+
+### spawn/resume
 
 | 场景 | 命令 |
 |---|---|

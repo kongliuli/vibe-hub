@@ -1,0 +1,5 @@
+{"type":"session_meta","timestamp":"2026-07-21T00:00:00Z","payload":{"cwd":"D:\\tmp"}}
+{"type":"event_msg","timestamp":"2026-07-21T00:00:01Z","payload":{"type":"user_message","message":"hello from user"}}
+{"type":"event_msg","timestamp":"2026-07-21T00:00:02Z","payload":{"type":"agent_message","message":"hello from agent"}}
+{"type":"event_msg","timestamp":"2026-07-21T00:00:03Z","payload":{"type":"agent_reasoning","text":"thinking…"}}
+{"type":"event_msg","timestamp":"2026-07-21T00:00:04Z","payload":{"type":"other","message":"skip"}}

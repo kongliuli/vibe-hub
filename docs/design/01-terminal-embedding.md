@@ -1,8 +1,18 @@
 # WPF 内嵌终端选型
 
 > 编写模型: Claude Fable 5 (Cursor Agent) · 2026-07-21
+> 编写模型: Cursor Grok 4.5 (Cursor Agent) · 2026-07-21
 
 结论：**主选 EasyWindowsTerminalControl，备选 WebView2 + xterm.js；Rikitav/VirtualTerminal 仅观察**。ConPTY 封装主选 `TermPTY`（随主选控件自带），备选抄 CodeShellManager 的 `PseudoTerminal.cs`；Pty.Net 不采用（无公开 NuGet 包、不维护）。
+
+## 落地状态（2026-07-21）
+
+- Spike：`spikes/TerminalSpike.EWTC`（`EasyTerminalControl` + `Win32InputMode`，可切换 opencode/codex/claude）
+- 主程序：`VibeHub.Terminal.EwtcProcessLauncher` → `VibeHub.App` Terminal Tab
+- **IME**：人工验收通过，定案方案②（EWTC）
+- **坑**：OpenCode Restart 后会出无法跳过的更新提示 → spawn 必须带 `OPENCODE_DISABLE_AUTOUPDATE=true`（及可选 `OPENCODE_DISABLE_MODELS_FETCH=1`）；全局也可在 `~/.config/opencode/opencode.json(c)` 写 `"autoupdate": false`
+- **坑**：WPF 默认抢键 → 禁掉 `ApplicationCommands.Print/Find`（Ctrl+P/F）；工具栏 `IsTabStop=False`
+- **坑（已踩）**：EWTC `InputCapture=TabKey` 只把 `KeyboardNavigation` 设为 `Contained`，**不会**把键送给 ConPTY。入口层修了 Tab/Enter 后，TUI 内层页面（`/` 菜单、选择器）仍可能缺方向键/Esc/Ctrl+P。正解：`TerminalInputTuning` 注入 VT（箭头/Esc/Tab/CR）+ Ctrl+A-Z 的 C0；禁 WPF Print/Find 的同时把 Ctrl+P/F 转进 PTY；`TabControl` 关 `ControlTabNavigation`，避免 Ctrl+Tab 切到 Structured；点击终端区域强制 `Focus()`
 
 ## 候选对比（2026-07 调研）
 

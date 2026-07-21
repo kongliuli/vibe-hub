@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/spikes/">
+    <Project Path="spikes/TerminalSpike.EWTC/TerminalSpike.EWTC.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/VibeHub.App/VibeHub.App.csproj" />
+    <Project Path="src/VibeHub.Core/VibeHub.Core.csproj" />
+    <Project Path="src/VibeHub.Terminal/VibeHub.Terminal.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/VibeHub.Core.Tests/VibeHub.Core.Tests.csproj" />
+  </Folder>
+</Solution>

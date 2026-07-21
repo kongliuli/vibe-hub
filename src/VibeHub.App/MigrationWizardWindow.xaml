@@ -1,0 +1,41 @@
+<Window x:Class="VibeHub.App.MigrationWizardWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="跨工具迁移向导"
+        Height="640" Width="720"
+        Background="#141414" Foreground="#e8e8e8">
+  <DockPanel Margin="16">
+    <TextBlock DockPanel.Dock="Top" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,4"
+               Text="语义迁移"/>
+    <TextBlock DockPanel.Dock="Top" Foreground="#888" Margin="0,0,0,12" TextWrapping="Wrap"
+               Text="raw 不可移植。流程：读 summary → 写 handoff → 投影到目标工具 → 开新 Job。"/>
+
+    <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+      <TextBlock Foreground="#888" Text="projectId"/>
+      <TextBox x:Name="ProjectBox" Margin="0,4,0,8"/>
+      <TextBlock Foreground="#888" Text="源会话 sessionId"/>
+      <TextBox x:Name="SessionBox" Margin="0,4,0,8"/>
+      <TextBlock Foreground="#888" Text="源 Provider"/>
+      <TextBox x:Name="SourceBox" Margin="0,4,0,8" IsReadOnly="True"/>
+      <TextBlock Foreground="#888" Text="目标 Provider"/>
+      <ComboBox x:Name="TargetBox" Margin="0,4,0,8">
+        <ComboBoxItem Content="opencode" IsSelected="True"/>
+        <ComboBoxItem Content="codex"/>
+        <ComboBoxItem Content="claude"/>
+        <ComboBoxItem Content="cursor-agent"/>
+      </ComboBox>
+      <TextBlock Foreground="#888" Text="工作目录（新 Job）"/>
+      <TextBox x:Name="CwdBox" Margin="0,4,0,8"/>
+    </StackPanel>
+
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,12,0,0">
+      <Button Content="1. 生成 plan" Click="Prepare_OnClick" Margin="0,0,8,0" Padding="10,6"/>
+      <Button Content="2. 投影注入" Click="Project_OnClick" Margin="0,0,8,0" Padding="10,6"/>
+      <Button Content="3. 开新 Job" Click="StartJob_OnClick" Padding="10,6"/>
+    </StackPanel>
+
+    <TextBlock DockPanel.Dock="Top" Foreground="#888" Text="Handoff 预览"/>
+    <TextBox x:Name="HandoffBox" Margin="0,4,0,0" AcceptsReturn="True" TextWrapping="Wrap"
+             VerticalScrollBarVisibility="Auto" Background="#1c1c1c" BorderBrush="#444"/>
+  </DockPanel>
+</Window>

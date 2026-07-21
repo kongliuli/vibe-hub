@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>VibeHub.App</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="EasyWindowsTerminalControl" Version="1.0.38" />
+    <PackageReference Include="HandyControl" Version="3.5.1" />
+    <PackageReference Include="Markdig" Version="0.43.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\VibeHub.Core\VibeHub.Core.csproj" />
+    <ProjectReference Include="..\VibeHub.Terminal\VibeHub.Terminal.csproj" />
+  </ItemGroup>
+</Project>

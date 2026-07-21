@@ -1,0 +1,26 @@
+﻿<Window x:Class="TerminalSpike.EWTC.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:term="clr-namespace:EasyWindowsTerminalControl;assembly=EasyWindowsTerminalControl"
+        Title="TerminalSpike.EWTC — IME / TUI 验收"
+        Height="720" Width="1100"
+        Background="#1e1e1e">
+  <DockPanel>
+    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8" Background="#2d2d2d">
+      <TextBlock Text="CLI:" Foreground="#ccc" VerticalAlignment="Center" Margin="0,0,8,0"/>
+      <ComboBox x:Name="CliCombo" Width="160" SelectedIndex="0" SelectionChanged="CliCombo_OnSelectionChanged">
+        <ComboBoxItem Content="opencode"/>
+        <ComboBoxItem Content="codex"/>
+        <ComboBoxItem Content="claude"/>
+        <ComboBoxItem Content="pwsh.exe"/>
+      </ComboBox>
+      <Button Content="Restart" Margin="8,0,0,0" Padding="12,4" Click="Restart_OnClick" IsTabStop="False"/>
+      <TextBlock Margin="16,0,0,0" Foreground="#888" VerticalAlignment="Center"
+                 Text="验收：Tab/Enter 经 WriteToTerm 注入（EWTC Contained 不够）"/>
+    </StackPanel>
+    <term:EasyTerminalControl x:Name="Term"
+                              StartupCommandLine="cmd.exe /c &quot;set &quot;OPENCODE_DISABLE_AUTOUPDATE=true&quot; &amp;&amp; set &quot;OPENCODE_DISABLE_MODELS_FETCH=1&quot; &amp;&amp; opencode&quot;"
+                              Win32InputMode="True"
+                              FontSizeWhenSettingTheme="13"/>
+  </DockPanel>
+</Window>

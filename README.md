@@ -18,7 +18,7 @@
 | OpenCode | `opencode` / `-c` / `-s <id>` | `~/.local/share/opencode/opencode.db`（明文 SQLite） |
 | Codex | `codex` / `codex resume` | `~/.codex/sessions/**/*.jsonl` |
 | Claude Code | `claude`（Win resume 有雷区） | `~/.claude/projects/**/*.jsonl` |
-| Cursor agent | `agent` / `agent resume`（待安装） | `~/.cursor/chats/`（protobuf，走 stream-json 捕获） |
+| Cursor agent | `agent` / `agent resume`（装到 `%LOCALAPPDATA%\cursor-agent`，与 IDE 分离） | stream-json 捕获为主；IDE `agent-transcripts` 常 REDACTED |
 
 Pi 仅作「注入范式」参考，不进默认调度名单。
 
@@ -37,11 +37,20 @@ docs/
     03-archive-sources.md    # 本机归档源勘察与可行性
     04-inject-skills.md      # 注入落点 + Skills 管理策略
     05-local-inventory.md    # 本机 C 盘 AI 目录盘点
-  specs/
-    spec-001-terminal-spike.md  # 终端控件 spike
-    spec-002-mvp-skeleton.md    # MVP 骨架
+  archive/2026-07/
+    spec-001-terminal-spike.md
+    spec-002-mvp-skeleton.md
+    spec-003-archive-batch1.md  # 归档第一批（已落地）
 ```
 
 ## 当前状态
 
-仅文档（调研与设计已定稿）；代码未开始。按 `docs/PENDING.md` 的顺序实施。
+P1–P3 已落地：
+
+```bash
+dotnet build VibeHub.slnx
+dotnet test
+dotnet run --project src/VibeHub.App
+```
+
+左栏：Dispatch Provider（Start/Resume）+ **Archive Source**（OpenCode / Codex / WorkBuddy / Kimi / Trae skills / Trae 加密元数据）。右侧 Terminal | Structured。主线 P1–P7 骨架已齐（见 `docs/PENDING.md`）。Cursor `agent`：`irm 'https://cursor.com/install?win32=true' | iex`。vault 默认 `%USERPROFILE%\vibe-hub-vault`。
