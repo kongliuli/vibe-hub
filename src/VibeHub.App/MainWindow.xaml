@@ -265,12 +265,6 @@
               <Button Style="{StaticResource ToolbarButton}" Content="Kill" Click="Kill_OnClick" IsTabStop="False"/>
             </StackPanel>
 
-            <TextBlock Style="{StaticResource SectionTitle}" Text="归档源与条目 · REAL"/>
-            <ComboBox x:Name="ArchiveSourceBox" Height="32" Margin="0,0,0,7" DisplayMemberPath="DisplayName"
-                      SelectionChanged="ArchiveSourceBox_OnSelectionChanged"/>
-            <ListBox x:Name="SessionList" Height="150" DisplayMemberPath="Title"
-                     SelectionChanged="SessionList_OnSelectionChanged"/>
-
             <TextBlock Style="{StaticResource SectionTitle}" Text="运行中的 Jobs · REAL" Margin="0,12,0,7"/>
             <ListBox x:Name="JobList" Height="86" DisplayMemberPath="Display"
                      SelectionChanged="JobList_OnSelectionChanged"/>
@@ -297,6 +291,7 @@
           </StackPanel>
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom">
             <Button Style="{StaticResource PrimaryButton}" Content="新建任务" Tag="projects" Click="Navigate_OnClick"/>
+            <Button Style="{StaticResource ToolbarButton}" Content="选择会话" Tag="sessions" Click="Navigate_OnClick"/>
             <Button Style="{StaticResource ToolbarButton}" Content="审阅队列" Click="ReviewQueue_OnClick"/>
             <Button Style="{StaticResource ToolbarButton}" Content="迁移" Click="Migrate_OnClick"/>
           </StackPanel>
@@ -411,16 +406,6 @@
             </StackPanel>
           </TabItem>
 
-          <TabItem Header="Vault">
-            <StackPanel Margin="0,10,0,0">
-              <TextBlock Text="Vault 全文检索" FontSize="16" FontWeight="SemiBold"/>
-              <TextBlock Text="搜索已经 Harvest 的 canonical messages。" Foreground="{StaticResource TextSecondary}" Margin="0,4,0,12"/>
-              <DockPanel MaxWidth="640" HorizontalAlignment="Left">
-                <Button DockPanel.Dock="Right" Style="{StaticResource PrimaryButton}" Content="搜索" Click="VaultSearch_OnClick"/>
-                <TextBox x:Name="VaultSearchBox" Width="520" Height="32"/>
-              </DockPanel>
-            </StackPanel>
-          </TabItem>
         </TabControl>
 
         <Border Grid.Row="3" Style="{StaticResource PanelBorder}" Margin="0,10,0,0" Padding="10">
@@ -471,23 +456,11 @@
 
             <Border Style="{StaticResource PanelBorder}" Margin="0,0,0,8">
               <StackPanel>
-                <Grid Margin="0,0,0,8">
-                  <TextBlock Style="{StaticResource SectionTitle}" Text="MEMORY 与 HANDOFF · REAL"/>
-                  <ToggleButton HorizontalAlignment="Right" IsChecked="True" Width="34" Height="18" IsEnabled="False" ToolTip="展示态；真实开关待接入"/>
-                </Grid>
-                <TextBlock Text="projectId" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
-                <TextBox x:Name="InjectProjectBox" Height="30" Margin="0,3,0,8" IsReadOnly="True"/>
-                <TextBlock Text="memory.md" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
-                <TextBox x:Name="InjectMemoryBox" Height="68" Margin="0,3,0,8" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
-                <TextBlock Text="handoff.md" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
-                <TextBox x:Name="InjectHandoffBox" Height="62" Margin="0,3,0,8" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
-                <WrapPanel>
-                  <Button Style="{StaticResource PrimaryButton}" Content="保存 Sink" Click="InjectSave_OnClick"/>
-                  <Button Style="{StaticResource ToolbarButton}" Content="→ OpenCode" Click="InjectProjectOpenCode_OnClick"/>
-                  <Button Style="{StaticResource ToolbarButton}" Content="→ Codex" Click="InjectProjectCodex_OnClick"/>
-                  <Button Style="{StaticResource ToolbarButton}" Content="拆除" Click="InjectToggleOff_OnClick"/>
-                </WrapPanel>
-                <TextBlock x:Name="InjectStatus" Foreground="{StaticResource Success}" TextWrapping="Wrap" Margin="0,7,0,0"/>
+                <TextBlock Style="{StaticResource SectionTitle}" Text="MEMORY 与 HANDOFF · REAL"/>
+                <TextBlock Text="已拆分到独立页面，集中管理 sink 与工具投影。"
+                           Foreground="{StaticResource TextSecondary}" TextWrapping="Wrap" Margin="0,0,0,9"/>
+                <Button Style="{StaticResource PrimaryButton}" Content="打开 Memory" Tag="memory"
+                        Click="Navigate_OnClick" HorizontalAlignment="Left"/>
               </StackPanel>
             </Border>
 
@@ -561,6 +534,52 @@
             </StackPanel>
           </ScrollViewer>
 
+          <ScrollViewer x:Name="SessionsPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="28,22" MaxWidth="1040" HorizontalAlignment="Left">
+              <Grid Margin="0,0,0,16">
+                <StackPanel>
+                  <TextBlock Text="归档会话" FontSize="17" FontWeight="SemiBold"/>
+                  <TextBlock Text="选择归档源和会话后，可恢复、Harvest、Distill 或迁移。"
+                             Foreground="{StaticResource TextSecondary}" Margin="0,5,0,0"/>
+                </StackPanel>
+                <hc:Tag HorizontalAlignment="Right" VerticalAlignment="Top" Content="REAL" Foreground="#A8E8C9" Background="#19362B"/>
+              </Grid>
+              <Border Style="{StaticResource PanelBorder}" Padding="14" Margin="0,0,0,12">
+                <Grid>
+                  <Grid.ColumnDefinitions><ColumnDefinition Width="320"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                  <ComboBox x:Name="ArchiveSourceBox" Height="34" DisplayMemberPath="DisplayName"
+                            SelectionChanged="ArchiveSourceBox_OnSelectionChanged"/>
+                  <TextBlock Grid.Column="1" Text="选择来源后读取最近 100 条归档" Foreground="{StaticResource TextSecondary}"
+                             VerticalAlignment="Center" Margin="14,0"/>
+                  <Button Grid.Column="2" Style="{StaticResource ToolbarButton}" Content="刷新" Click="Refresh_OnClick"/>
+                </Grid>
+              </Border>
+              <ListBox x:Name="SessionList" MinHeight="320" MaxHeight="560"
+                       SelectionChanged="SessionList_OnSelectionChanged" Background="Transparent" BorderThickness="0">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <Border Style="{StaticResource PanelBorder}" Margin="0,0,0,7" Padding="12">
+                      <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="110"/><ColumnDefinition Width="*"/><ColumnDefinition Width="280"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Provider}" Foreground="#AFC8FF" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Title}" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Grid.Column="2" Text="{Binding Cwd}" Foreground="{StaticResource TextSecondary}"
+                                   TextTrimming="CharacterEllipsis" Margin="14,0,0,0"/>
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+              <WrapPanel Margin="0,12,0,0">
+                <Button Style="{StaticResource PrimaryButton}" Content="在工作台打开" Click="OpenSelectedSession_OnClick"/>
+                <Button Style="{StaticResource ToolbarButton}" Content="Resume" Click="Resume_OnClick"/>
+                <Button Style="{StaticResource ToolbarButton}" Content="Harvest" Click="Harvest_OnClick"/>
+                <Button Style="{StaticResource ToolbarButton}" Content="Distill" Click="Distill_OnClick"/>
+                <Button Style="{StaticResource ToolbarButton}" Content="迁移" Click="Migrate_OnClick"/>
+              </WrapPanel>
+            </StackPanel>
+          </ScrollViewer>
+
           <ScrollViewer x:Name="AgentsPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="28,22" MaxWidth="1040" HorizontalAlignment="Left">
               <Border Style="{StaticResource PanelBorder}" Margin="0,0,0,18" Padding="16">
@@ -568,7 +587,7 @@
                   <Grid Margin="0,0,0,12">
                     <StackPanel>
                       <TextBlock Text="任务调度" FontSize="17" FontWeight="SemiBold"/>
-                      <TextBlock Text="真实调用 OpenCode headless run；当前仅开放 OpenCode 默认智能体与 Sisyphus。"
+                      <TextBlock Text="真实调用 OpenCode headless run；支持直接模型与 Sisyphus。"
                                  Foreground="{StaticResource TextSecondary}" Margin="0,4,0,0"/>
                     </StackPanel>
                     <hc:Tag HorizontalAlignment="Right" VerticalAlignment="Top" Content="REAL" Foreground="#A8E8C9" Background="#19362B"/>
@@ -634,6 +653,71 @@
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
+            </StackPanel>
+          </ScrollViewer>
+
+          <ScrollViewer x:Name="VaultPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="28,22" MaxWidth="1040" HorizontalAlignment="Left">
+              <Grid Margin="0,0,0,16">
+                <StackPanel>
+                  <TextBlock Text="Vault 全文检索" FontSize="17" FontWeight="SemiBold"/>
+                  <TextBlock Text="搜索已 Harvest 的 canonical messages；不会读取未归档会话。"
+                             Foreground="{StaticResource TextSecondary}" Margin="0,5,0,0"/>
+                </StackPanel>
+                <hc:Tag HorizontalAlignment="Right" VerticalAlignment="Top" Content="REAL" Foreground="#A8E8C9" Background="#19362B"/>
+              </Grid>
+              <Border Style="{StaticResource PanelBorder}" Padding="14" Margin="0,0,0,12">
+                <DockPanel>
+                  <Button DockPanel.Dock="Right" Style="{StaticResource PrimaryButton}" Content="搜索" Click="VaultSearch_OnClick"/>
+                  <TextBox x:Name="VaultSearchBox" Height="34" Margin="0,0,10,0"/>
+                </DockPanel>
+              </Border>
+              <TextBlock x:Name="VaultSearchStatus" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,10"
+                         Text="输入关键词开始搜索"/>
+              <ListBox x:Name="VaultResultList" Background="Transparent" BorderThickness="0">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <Border Style="{StaticResource PanelBorder}" Margin="0,0,0,8" Padding="12">
+                      <StackPanel>
+                        <TextBlock Text="{Binding RoleLabel}" Foreground="#AFC8FF" FontSize="11" Margin="0,0,0,5"/>
+                        <TextBlock Text="{Binding Content}" TextWrapping="Wrap"/>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </StackPanel>
+          </ScrollViewer>
+
+          <ScrollViewer x:Name="MemoryPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="28,22" MaxWidth="900" HorizontalAlignment="Left">
+              <Grid Margin="0,0,0,16">
+                <StackPanel>
+                  <TextBlock Text="项目 Memory 与 Handoff" FontSize="17" FontWeight="SemiBold"/>
+                  <TextBlock Text="保存当前项目 sink，并按需投影到工具管理块。"
+                             Foreground="{StaticResource TextSecondary}" Margin="0,5,0,0"/>
+                </StackPanel>
+                <hc:Tag HorizontalAlignment="Right" VerticalAlignment="Top" Content="REAL" Foreground="#A8E8C9" Background="#19362B"/>
+              </Grid>
+              <Border Style="{StaticResource PanelBorder}" Padding="16">
+                <StackPanel>
+                  <TextBlock Style="{StaticResource SectionTitle}" Text="当前 projectId"/>
+                  <TextBox x:Name="InjectProjectBox" Height="34" Margin="0,0,0,14" IsReadOnly="True"/>
+                  <TextBlock Style="{StaticResource SectionTitle}" Text="memory.md"/>
+                  <TextBox x:Name="InjectMemoryBox" MinHeight="150" Margin="0,0,0,14" AcceptsReturn="True"
+                           TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
+                  <TextBlock Style="{StaticResource SectionTitle}" Text="handoff.md"/>
+                  <TextBox x:Name="InjectHandoffBox" MinHeight="130" Margin="0,0,0,14" AcceptsReturn="True"
+                           TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
+                  <WrapPanel>
+                    <Button Style="{StaticResource PrimaryButton}" Content="保存 Sink" Click="InjectSave_OnClick"/>
+                    <Button Style="{StaticResource ToolbarButton}" Content="投影到 OpenCode" Click="InjectProjectOpenCode_OnClick"/>
+                    <Button Style="{StaticResource ToolbarButton}" Content="投影到 Codex" Click="InjectProjectCodex_OnClick"/>
+                    <Button Style="{StaticResource ToolbarButton}" Content="拆除最近投影" Click="InjectToggleOff_OnClick"/>
+                  </WrapPanel>
+                  <TextBlock x:Name="InjectStatus" Foreground="{StaticResource Success}" TextWrapping="Wrap" Margin="0,10,0,0"/>
+                </StackPanel>
+              </Border>
             </StackPanel>
           </ScrollViewer>
 
@@ -710,15 +794,6 @@
             </StackPanel>
           </ScrollViewer>
 
-          <Grid x:Name="PlaceholderPage" Visibility="Collapsed" Margin="28,22">
-            <Border Style="{StaticResource PanelBorder}" MaxWidth="760" MaxHeight="170" HorizontalAlignment="Left" VerticalAlignment="Top" Padding="18">
-              <StackPanel>
-                <TextBlock x:Name="PlaceholderTitle" FontSize="17" FontWeight="SemiBold"/>
-                <TextBlock x:Name="PlaceholderBody" Foreground="{StaticResource TextSecondary}" TextWrapping="Wrap" Margin="0,8,0,14"/>
-                <Button Style="{StaticResource PrimaryButton}" Content="返回会话工作台" Tag="sessions" Click="Navigate_OnClick" HorizontalAlignment="Left"/>
-              </StackPanel>
-            </Border>
-          </Grid>
         </Grid>
       </Grid>
     </Grid>

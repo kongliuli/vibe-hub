@@ -12,7 +12,8 @@
 - [x] 保留真实的 Start、Resume、Kill、Archive、Structured、Vault Search、Harvest、Distill、Review、Inject 和 Migration 入口。
 - [x] 终端创建后自动切到 Terminal Tab，并保留原键盘转发与焦点处理。
 - [x] 侧边栏导航可用；Agent、Skills、设置拆为独立页面，不再混入会话上下文。
-- [x] 设置页持久化默认 Provider、工作目录、新终端自动聚焦，以及 OpenCode 任务默认智能体和模型。
+- [x] 会话、Vault、Memory 拆为独立页面；工作台不再重复承载归档列表、Vault 搜索和 Memory 编辑器。
+- [x] 设置页持久化默认 Provider、工作目录、新终端自动聚焦，以及 OpenCode 默认执行模式和模型。
 - [x] 会话工作台顶部 Provider/Job 条读取当前选择与 Supervisor 真状态；新建任务入口转到真实项目任务页，不再显示假 Running 时长。
 
 ## 已连接真实功能
@@ -38,8 +39,8 @@
 - [ ] Skills 页面：已读取 `SkillManifestStore` 真数据；真实安装、启停和漂移修复操作仍待接入。
 - [ ] Composer：接入当前 PTY 或 headless Job；当前输入框禁用发送。
 - [ ] 底部状态栏：Git 分支与变更数已接真；测试、Vault 和 Agent 实时状态仍待接入。
-- [ ] Memory 开关：接入投影 toggle；当前开关仅展示，真实写入仍使用显式按钮。
-- [ ] 项目独立页已接 HubStore 真数据；Vault、Memory 独立页仍暂留 PENDING，真实功能还在会话工作台。
+- [x] Memory 页面使用显式保存、投影和拆除操作，不再展示不可用的假开关。
+- [x] 项目、会话、Vault、Memory 均已作为独立页面接入现有真实服务。
 
 ## P0 功能债务
 

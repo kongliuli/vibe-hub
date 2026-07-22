@@ -61,6 +61,7 @@ public partial class MainWindow : Window
     public ObservableCollection<SessionRow> Sessions { get; } = new();
     public ObservableCollection<JobRow> Jobs { get; } = new();
     public ObservableCollection<MessageRow> Messages { get; } = new();
+    public ObservableCollection<MessageRow> VaultResults { get; } = new();
 
     public MainWindow()
     {
@@ -72,6 +73,7 @@ public partial class MainWindow : Window
         SessionList.ItemsSource = Sessions;
         JobList.ItemsSource = Jobs;
         MessageList.ItemsSource = Messages;
+        VaultResultList.ItemsSource = VaultResults;
         ApplyAgentTaskPreferences();
         CwdBox.Text = Directory.Exists(_preferences.DefaultWorkingDirectory)
             ? _preferences.DefaultWorkingDirectory
@@ -167,6 +169,9 @@ public partial class MainWindow : Window
         _currentProject = project;
         CwdBox.Text = fullRoot;
         InjectProjectBox.Text = project.Id;
+        InjectMemoryBox.Text = _injectSink.Read(project.Id, InjectKind.Memory) ?? "";
+        InjectHandoffBox.Text = _injectSink.Read(project.Id, InjectKind.Handoff) ?? "";
+        InjectStatus.Text = "";
         RefreshWorkspaceData();
     }
 
@@ -291,12 +296,13 @@ public partial class MainWindow : Window
     {
         AgentsPage.Visibility = Visibility.Collapsed;
         ProjectsPage.Visibility = Visibility.Collapsed;
+        SessionsPage.Visibility = Visibility.Collapsed;
+        VaultPage.Visibility = Visibility.Collapsed;
+        MemoryPage.Visibility = Visibility.Collapsed;
         SkillsPage.Visibility = Visibility.Collapsed;
         SettingsPage.Visibility = Visibility.Collapsed;
-        PlaceholderPage.Visibility = Visibility.Collapsed;
 
-        var isSessionPage = page is "workbench" or "sessions";
-        FeaturePageHost.Visibility = isSessionPage ? Visibility.Collapsed : Visibility.Visible;
+        FeaturePageHost.Visibility = page == "workbench" ? Visibility.Collapsed : Visibility.Visible;
 
         switch (page)
         {
@@ -330,11 +336,18 @@ public partial class MainWindow : Window
                 RefreshWorkspaceData();
                 ProjectsPage.Visibility = Visibility.Visible;
                 break;
+            case "sessions":
+                SetFeatureHeader("SESSIONS", "会话", "集中选择归档源、恢复会话、Harvest、Distill 与迁移。");
+                RefreshArchiveEntries();
+                SessionsPage.Visibility = Visibility.Visible;
+                break;
             case "vault":
-                ShowPlaceholder("VAULT", "Vault", "FTS 搜索和 Harvest 已可用，当前入口仍在会话工作台的结构化标签中。", "Vault 独立页 · PENDING");
+                SetFeatureHeader("VAULT", "Vault", "搜索已经 Harvest 的 canonical messages。");
+                VaultPage.Visibility = Visibility.Visible;
                 break;
             case "memory":
-                ShowPlaceholder("MEMORY", "Memory 与 Handoff", "真实 sink 与投影已可用，独立管理页将在统一项目身份后接入。", "Memory 独立页 · PENDING");
+                SetFeatureHeader("MEMORY", "Memory 与 Handoff", "管理当前项目 sink，并投影到 OpenCode 或 Codex。");
+                MemoryPage.Visibility = Visibility.Visible;
                 break;
         }
 
@@ -361,19 +374,11 @@ public partial class MainWindow : Window
         FeaturePageSubtitle.Text = subtitle;
     }
 
-    private void ShowPlaceholder(string eyebrow, string title, string body, string placeholderTitle)
-    {
-        SetFeatureHeader(eyebrow, title, body);
-        PlaceholderTitle.Text = placeholderTitle;
-        PlaceholderBody.Text = body;
-        PlaceholderPage.Visibility = Visibility.Visible;
-    }
-
     private void UseAgent_OnClick(object sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: string providerId }) return;
         SelectProvider(providerId);
-        NavigateTo("sessions");
+        NavigateTo("workbench");
         StructuredStatus.Text = $"已选择 {providerId}，可启动新会话";
     }
 
@@ -516,7 +521,7 @@ public partial class MainWindow : Window
         var project = _store.ListProjects().FirstOrDefault(candidate => candidate.Id == projectId);
         if (project is null || !Directory.Exists(project.RootPath)) return;
         SelectWorkspace(project.RootPath);
-        NavigateTo("sessions");
+        NavigateTo("workbench");
     }
 
     private void AddTask_OnClick(object sender, RoutedEventArgs e)
@@ -661,6 +666,18 @@ public partial class MainWindow : Window
         LoadStructured(force: true);
     }
 
+    private void OpenSelectedSession_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (SessionList.SelectedItem is null)
+        {
+            MessageBox.Show("先选择一条会话");
+            return;
+        }
+
+        NavigateTo("workbench");
+        StructuredTab.IsSelected = true;
+    }
+
     private async void Distill_OnClick(object sender, RoutedEventArgs e)
     {
         if (SessionList.SelectedItem is not SessionRow row)
@@ -744,21 +761,21 @@ public partial class MainWindow : Window
         }
 
         var hits = _vaultIndex.Search(q, 30);
+        VaultResults.Clear();
         if (hits.Count == 0)
         {
-            StructuredStatus.Text = "FTS: 无命中";
+            VaultSearchStatus.Text = "无命中";
             return;
         }
 
-        Messages.Clear();
         foreach (var h in hits)
         {
-            Messages.Add(MessageRow.From(new CanonicalMessage(
+            VaultResults.Add(MessageRow.From(new CanonicalMessage(
                 h.SessionId, h.SessionId, h.Role,
                 $"[{h.ProjectId}/{h.SessionId}] {h.Snippet}", null)));
         }
 
-        StructuredStatus.Text = $"FTS · {hits.Count} hits for «{q}»";
+        VaultSearchStatus.Text = $"{hits.Count} hits for «{q}»";
     }
 
     private void Harvest_OnClick(object sender, RoutedEventArgs e)
