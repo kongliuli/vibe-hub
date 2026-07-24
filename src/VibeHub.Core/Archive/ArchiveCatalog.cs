@@ -105,7 +105,10 @@ public sealed class OpenCodeArchiveSource : IArchiveSource
 
 public sealed class CodexArchiveSource : IArchiveSource
 {
-    private readonly CodexAdapter _adapter = new();
+    private readonly CodexAdapter _adapter;
+
+    public CodexArchiveSource(string? sessionsRoot = null)
+        => _adapter = new CodexAdapter { SessionsRootOverride = sessionsRoot };
 
     public string SourceId => "codex";
     public string DisplayName => "Codex";
@@ -132,10 +135,26 @@ public sealed class CodexArchiveSource : IArchiveSource
 
     public IReadOnlyList<CanonicalMessage> GetMessages(string entryId, int limit = 500)
     {
-        if (!Directory.Exists(_adapter.SessionsRoot)) return [];
-        var path = Directory.EnumerateFiles(_adapter.SessionsRoot, "rollout-*.jsonl", SearchOption.AllDirectories)
-            .FirstOrDefault(f => f.Contains(entryId, StringComparison.OrdinalIgnoreCase));
+        var path = FindRolloutPath(entryId);
         if (path is null) return [];
         return CodexRolloutParser.ParseFile(path, entryId).Take(limit).ToList();
+    }
+
+    public bool ExportRawSession(string entryId, string destination)
+    {
+        var path = FindRolloutPath(entryId);
+        if (path is null) return false;
+        var dir = Path.GetDirectoryName(destination);
+        if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+        File.Copy(path, destination, overwrite: true);
+        return true;
+    }
+
+    private string? FindRolloutPath(string entryId)
+    {
+        if (!Directory.Exists(_adapter.SessionsRoot)) return null;
+        return Directory.EnumerateFiles(_adapter.SessionsRoot, "rollout-*.jsonl", SearchOption.AllDirectories)
+            .FirstOrDefault(path => Path.GetFileNameWithoutExtension(path)
+                .EndsWith(entryId, StringComparison.OrdinalIgnoreCase));
     }
 }

@@ -101,6 +101,44 @@ public sealed class SkillInstaller
         _store.Save(all);
     }
 
+    public string Repair(string skillId, string toolId, string? targetRootOverride = null)
+    {
+        var all = _store.Load();
+        if (!all.TryGetValue(skillId, out var record)
+            || !record.Tools.TryGetValue(toolId, out var install)
+            || !install.Enabled)
+            throw new InvalidOperationException($"Skill is not enabled for {toolId}: {skillId}");
+        if (!Directory.Exists(record.SourcePath))
+            throw new DirectoryNotFoundException(record.SourcePath);
+
+        var targetRoot = Path.GetFullPath(targetRootOverride ?? ToolSkillsRoot(toolId));
+        var target = ResolveTarget(targetRoot, skillId);
+        if (!SamePath(install.TargetPath, target))
+            throw new InvalidOperationException($"Skill target is outside its configured root: {install.TargetPath}");
+
+        string? backup = null;
+        if (Directory.Exists(target) && IsTargetDrifted(skillId, toolId))
+        {
+            backup = target + ".vibe-hub-drift-" + Guid.NewGuid().ToString("n")[..8];
+            Directory.Move(target, backup);
+        }
+
+        try
+        {
+            return Enable(skillId, record.SourcePath, toolId, targetRoot);
+        }
+        catch
+        {
+            if (backup is not null)
+            {
+                if (Directory.Exists(target)) TryDeleteDirectory(target);
+                if (!Directory.Exists(target) && Directory.Exists(backup))
+                    Directory.Move(backup, target);
+            }
+            throw;
+        }
+    }
+
     public bool IsTargetDrifted(string skillId, string toolId)
     {
         var all = _store.Load();

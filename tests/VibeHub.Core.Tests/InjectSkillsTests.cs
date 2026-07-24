@@ -6,6 +6,32 @@ namespace VibeHub.Core.Tests;
 public sealed class InjectSkillsTests
 {
     [Fact]
+    public void InjectSink_MigratesLegacyFilesWithoutOverwritingVault()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "vh-inj-migrate-" + Guid.NewGuid().ToString("n"));
+        var legacy = Path.Combine(root, "legacy");
+        var vaultProjects = Path.Combine(root, "vault", "projects");
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(legacy, "p1"));
+            Directory.CreateDirectory(Path.Combine(vaultProjects, "p1"));
+            File.WriteAllText(Path.Combine(legacy, "p1", "memory.md"), "legacy memory");
+            File.WriteAllText(Path.Combine(legacy, "p1", "handoff.md"), "legacy handoff");
+            File.WriteAllText(Path.Combine(vaultProjects, "p1", "handoff.md"), "vault handoff");
+
+            var sink = new InjectSink(vaultProjects, legacy);
+
+            Assert.Equal("legacy memory", sink.Read("p1", InjectKind.Memory));
+            Assert.Equal("vault handoff", sink.Read("p1", InjectKind.Handoff));
+            Assert.True(File.Exists(Path.Combine(legacy, "p1", "memory.md")));
+        }
+        finally
+        {
+            try { Directory.Delete(root, true); } catch { /* ignore */ }
+        }
+    }
+
+    [Fact]
     public void ManagedBlock_Upsert_PreservesUserText()
     {
         var user = "# my agents\n\nhello user\n";
@@ -81,7 +107,12 @@ public sealed class InjectSkillsTests
                 () => installer.Disable("demo-skill", "codex", toolRoot));
             Assert.True(Directory.Exists(dest));
 
-            File.WriteAllText(Path.Combine(dest, "SKILL.md"), "# demo\n");
+            installer.Repair("demo-skill", "codex", toolRoot);
+            Assert.False(installer.IsTargetDrifted("demo-skill", "codex"));
+            var backup = Assert.Single(Directory.EnumerateDirectories(
+                toolRoot, "demo-skill.vibe-hub-drift-*", SearchOption.TopDirectoryOnly));
+            Assert.Contains("changed", File.ReadAllText(Path.Combine(backup, "SKILL.md")));
+
             installer.Disable("demo-skill", "codex", toolRoot);
             Assert.False(Directory.Exists(dest));
 

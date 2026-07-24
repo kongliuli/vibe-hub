@@ -1,3 +1,5 @@
+using VibeHub.Core.Vault;
+
 namespace VibeHub.Core.Inject;
 
 public enum InjectKind
@@ -7,16 +9,21 @@ public enum InjectKind
     Context
 }
 
-/// <summary>Authoritative inject files under LocalAppData/vibe-hub/inject/&lt;projectId&gt;/.</summary>
+/// <summary>Authoritative inject files under the Vault project directory.</summary>
 public sealed class InjectSink
 {
     private readonly string _root;
 
-    public InjectSink(string? root = null)
+    public InjectSink(string? root = null, string? legacyRoot = null)
     {
-        _root = root ?? Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "vibe-hub", "inject");
+        _root = root ?? new VaultPaths().ProjectsRoot;
+        if (root is null || legacyRoot is not null)
+        {
+            legacyRoot ??= Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "vibe-hub", "inject");
+            CopyMissing(legacyRoot, _root);
+        }
     }
 
     public string Root => _root;
@@ -63,6 +70,30 @@ public sealed class InjectSink
         InjectKind.Context => "context.md",
         _ => throw new ArgumentOutOfRangeException(nameof(kind))
     };
+
+    private static void CopyMissing(string source, string target)
+    {
+        var sourceFull = Path.TrimEndingDirectorySeparator(Path.GetFullPath(source));
+        var targetFull = Path.TrimEndingDirectorySeparator(Path.GetFullPath(target));
+        if (!Directory.Exists(sourceFull)
+            || string.Equals(sourceFull, targetFull, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        foreach (var file in Directory.EnumerateFiles(sourceFull, "*", SearchOption.AllDirectories).ToList())
+        {
+            var destination = Path.Combine(targetFull, Path.GetRelativePath(sourceFull, file));
+            if (File.Exists(destination)) continue;
+            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+            try
+            {
+                File.Copy(file, destination, overwrite: false);
+            }
+            catch (IOException) when (File.Exists(destination))
+            {
+                // Another startup already migrated it.
+            }
+        }
+    }
 
     private static string Sanitize(string id)
     {

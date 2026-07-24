@@ -1,9 +1,45 @@
 using VibeHub.Core.Archive;
+using VibeHub.Core.Vault;
 
 namespace VibeHub.Core.Tests;
 
 public sealed class ArchiveSourceTests
 {
+    [Fact]
+    public void CodexArchive_ExportsOriginalRollout()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "vh-codex-" + Guid.NewGuid().ToString("n"));
+        const string id = "12345678-1234-1234-1234-123456789abc";
+        try
+        {
+            var sessions = Path.Combine(root, "sessions", "2026", "07", "21");
+            Directory.CreateDirectory(sessions);
+            var sourcePath = Path.Combine(sessions, $"rollout-2026-07-21T00-00-00-{id}.jsonl");
+            File.Copy(Path.Combine(AppContext.BaseDirectory, "Fixtures", "sample-rollout.jsonl"), sourcePath);
+
+            var source = new CodexArchiveSource(Path.Combine(root, "sessions"));
+            var entry = Assert.Single(source.List());
+            Assert.Equal(id, entry.Id);
+            Assert.Equal(3, source.GetMessages(id).Count);
+
+            var exported = Path.Combine(root, "export", "session.jsonl");
+            Assert.True(source.ExportRawSession(id, exported));
+            Assert.Equal(File.ReadAllBytes(sourcePath), File.ReadAllBytes(exported));
+
+            var vault = new VaultPaths(Path.Combine(root, "vault"));
+            var harvest = new Harvester(vault).IngestFromArchive("project", source, entry);
+            Assert.Equal(SessionLifecycle.Harvested, harvest.Meta.Lifecycle);
+            Assert.NotNull(harvest.Meta.RawHash);
+            Assert.Equal(
+                File.ReadAllBytes(sourcePath),
+                File.ReadAllBytes(Path.Combine(vault.RawDir("project", id), "session.jsonl")));
+        }
+        finally
+        {
+            try { Directory.Delete(root, true); } catch { /* ignore */ }
+        }
+    }
+
     [Fact]
     public void WorkBuddyMemory_ParsesFixture()
     {

@@ -710,7 +710,7 @@
                   <TextBox x:Name="InjectHandoffBox" MinHeight="130" Margin="0,0,0,14" AcceptsReturn="True"
                            TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
                   <WrapPanel>
-                    <Button Style="{StaticResource PrimaryButton}" Content="保存 Sink" Click="InjectSave_OnClick"/>
+                    <Button Style="{StaticResource PrimaryButton}" Content="保存到 Vault" Click="InjectSave_OnClick"/>
                     <Button Style="{StaticResource ToolbarButton}" Content="投影到 OpenCode" Click="InjectProjectOpenCode_OnClick"/>
                     <Button Style="{StaticResource ToolbarButton}" Content="投影到 Codex" Click="InjectProjectCodex_OnClick"/>
                     <Button Style="{StaticResource ToolbarButton}" Content="拆除最近投影" Click="InjectToggleOff_OnClick"/>
@@ -726,25 +726,54 @@
               <Grid Margin="0,0,0,16">
                 <StackPanel>
                   <TextBlock Text="受管 Skills" FontSize="17" FontWeight="SemiBold"/>
-                  <TextBlock Text="这里仅展示 manifest 中真实登记的 Skill；安装、启停与漂移修复将在本页完成。"
+                  <TextBlock Text="从本地 SKILL.md 安装，并按目标工具独立启用、停用或安全修复漂移。"
                              Foreground="{StaticResource TextSecondary}" Margin="0,5,0,0"/>
                 </StackPanel>
-                <hc:Tag HorizontalAlignment="Right" VerticalAlignment="Top" Content="READ ONLY" Foreground="#F6D18A" Background="#3A2C16"/>
+                <hc:Tag HorizontalAlignment="Right" VerticalAlignment="Top" Content="REAL" Foreground="#8FE3B5" Background="#173328"/>
               </Grid>
-              <Border Style="{StaticResource PanelBorder}" Margin="0,0,0,10">
-                <TextBlock Text="若列表为空，表示 Vibe Hub 尚未管理任何 Skill；不会用演示条目伪装成功。"
-                           Foreground="{StaticResource TextSecondary}"/>
+              <Border Style="{StaticResource PanelBorder}" Margin="0,0,0,10" Padding="14">
+                <StackPanel>
+                  <TextBlock Style="{StaticResource SectionTitle}" Text="安装本地 Skill"/>
+                  <Grid Margin="0,5,0,0">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*"/>
+                      <ColumnDefinition Width="Auto"/>
+                      <ColumnDefinition Width="150"/>
+                      <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="SkillSourceBox" Height="34" IsReadOnly="True"/>
+                    <Button Grid.Column="1" Style="{StaticResource ToolbarButton}" Content="选择 SKILL.md"
+                            Click="SkillBrowse_OnClick"/>
+                    <ComboBox x:Name="SkillToolBox" Grid.Column="2" Height="34" Margin="8,0" SelectedIndex="0">
+                      <ComboBoxItem Content="opencode"/><ComboBoxItem Content="codex"/>
+                      <ComboBoxItem Content="claude"/><ComboBoxItem Content="cursor"/>
+                    </ComboBox>
+                    <Button Grid.Column="3" Style="{StaticResource PrimaryButton}" Content="安装 / 启用"
+                            Click="SkillInstall_OnClick"/>
+                  </Grid>
+                  <TextBlock x:Name="SkillActionStatus" Foreground="{StaticResource TextSecondary}"
+                             TextWrapping="Wrap" Margin="0,8,0,0"/>
+                </StackPanel>
               </Border>
               <ItemsControl ItemsSource="{Binding Skills}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
                     <Border Style="{StaticResource PanelBorder}" Margin="0,0,0,8">
                       <Grid>
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="220"/><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="100"/></Grid.ColumnDefinitions>
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="180"/><ColumnDefinition Width="*"/>
+                          <ColumnDefinition Width="150"/><ColumnDefinition Width="150"/>
+                          <ColumnDefinition Width="240"/>
+                        </Grid.ColumnDefinitions>
                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
                         <TextBlock Grid.Column="1" Text="{Binding Source}" Foreground="{StaticResource TextSecondary}" TextTrimming="CharacterEllipsis"/>
                         <TextBlock Grid.Column="2" Text="{Binding Targets}" Foreground="#AFC8FF"/>
-                        <TextBlock Grid.Column="3" Text="{Binding Status}" HorizontalAlignment="Right" Foreground="{StaticResource Success}"/>
+                        <TextBlock Grid.Column="3" Text="{Binding Status}" Foreground="{Binding StatusColor}"/>
+                        <StackPanel Grid.Column="4" Orientation="Horizontal" HorizontalAlignment="Right">
+                          <Button Style="{StaticResource ToolbarButton}" Content="启用" Tag="{Binding Name}" Click="SkillEnable_OnClick"/>
+                          <Button Style="{StaticResource ToolbarButton}" Content="修复" Tag="{Binding Name}" Click="SkillRepair_OnClick"/>
+                          <Button Style="{StaticResource ToolbarButton}" Content="停用" Tag="{Binding Name}" Click="SkillDisable_OnClick"/>
+                        </StackPanel>
                       </Grid>
                     </Border>
                   </DataTemplate>

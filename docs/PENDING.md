@@ -36,7 +36,7 @@
 - [x] Changes：只读调用 Git CLI，展示当前工作区 tracked/untracked 文件与可用的增删行统计，并同步真实分支和变更数到底栏。
 - [ ] Agent 页面：CLI 可用性与 Model 覆盖已接真并可从设置持久化；Reasoning、Sandbox 与 Job 配置仍待接入。
 - [ ] Context 使用量与文件 chips：接入各 CLI 的真实 token/context 信息。
-- [ ] Skills 页面：已读取 `SkillManifestStore` 真数据；真实安装、启停和漂移修复操作仍待接入。
+- [x] Skills 页面：读取 `SkillManifestStore` 真数据，并已接通本地安装、按工具启停、漂移提示与保留备份的修复。
 - [ ] Composer：接入当前 PTY 或 headless Job；当前输入框禁用发送。
 - [ ] 底部状态栏：Git 分支与变更数已接真；测试、Vault 和 Agent 实时状态仍待接入。
 - [x] Memory 页面使用显式保存、投影和拆除操作，不再展示不可用的假开关。
@@ -49,8 +49,17 @@
 - [ ] 将 MainWindow 的服务编排和事件处理逐步迁移到命令/服务型 MVVM，保留 Dispatcher 边界。
 - [x] Claude Adapter：接入 Start、`--resume <session-id>`、本地 projects JSONL 会话列表与归档读取。
 - [ ] 经用户批准启动 UI 后，复核 Claude 在 EWTC/ConPTY 下的 Windows 交互 Resume 冻结问题；上游仍有 pseudo-terminal 冻结报告。
-- [ ] UI 中 Job、Harvest、Migration、Inject 已统一使用当前 `HubStore.Project.Id`；Inject sink 内容仍需进入 Vault 真源。
-- [ ] Codex/OpenCode Harvest 保存真正的 raw 会话或行导出，不只保存消息快照。
+- [x] UI 中 Job、Harvest、Migration、Inject 统一使用当前 `HubStore.Project.Id`；Inject 内容以 Vault project 文件为真源。
+- [x] Codex/OpenCode Harvest 保存真正的 rollout raw 或数据库行导出，不只保存消息快照。
+
+## spec-008：归档、Skills 与 Inject 闭环
+
+设计与验收见 [`archive/2026-07/spec-008-operational-closure.md`](archive/2026-07/spec-008-operational-closure.md)。
+
+- [x] Archive 列表、Structured、Harvest、Distill 移出 UI 线程并防止旧结果倒灌。
+- [x] Codex 原始 rollout JSONL 进入 Vault raw。
+- [x] Skills 页面接通安装/启用、停用、漂移提示与安全修复。
+- [x] Inject sink 迁入 Vault 真源并兼容旧 LocalAppData 内容。
 
 ## UI 验证
 

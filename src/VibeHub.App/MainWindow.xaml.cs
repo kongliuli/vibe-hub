@@ -45,7 +45,7 @@ public partial class MainWindow : Window
     private readonly ProcessHeadlessRunner _headless = new();
     private readonly GitChangesService _gitChanges = new();
     private readonly MigrationService _migration;
-    private readonly JobAutoHarvester _autoHarvest;
+    private readonly SkillInstaller _skillInstaller = new();
     private string? _lastInjectTarget;
     private readonly DispatcherTimer _pollTimer;
     private readonly Dictionary<IPseudoTerminal, EasyTerminalControl> _pendingTerminals = new();
@@ -56,6 +56,9 @@ public partial class MainWindow : Window
     private string? _structuredPath;
     private Project? _currentProject;
     private CancellationTokenSource? _agentTaskCancellation;
+    private int _archiveRefreshVersion;
+    private int _structuredLoadVersion;
+    private bool _structuredLoadInFlight;
     private DateTime _structuredMtime = DateTime.MinValue;
 
     public ObservableCollection<SessionRow> Sessions { get; } = new();
@@ -86,29 +89,7 @@ public partial class MainWindow : Window
         _migration = new MigrationService(_vaultPaths, _injectSink);
         _supervisor = new JobSupervisor(_launcher, [_opencode, _codex, _claude, _cursorAgent], _store);
         _supervisor.JobLaunched += OnJobLaunched;
-        _autoHarvest = new JobAutoHarvester(_harvester, _distiller.Captures, _archives);
-        _supervisor.JobExited += job =>
-        {
-            Dispatcher.BeginInvoke(() =>
-            {
-                var cap = _supervisor.GetCapture(job.Id);
-                var result = _autoHarvest.TryHarvest(job, cap);
-                RefreshJobs();
-                _viewModel.AddActivity(
-                    "Job 已结束",
-                    $"{job.Provider} · exit {job.ExitCode?.ToString() ?? "?"} · {job.Id[..8]}",
-                    "Job");
-                if (result is not null)
-                {
-                    StructuredStatus.Text =
-                        $"Auto-Harvest {result.Meta.Lifecycle} · {result.Meta.SessionId} · msgs={result.Meta.MessageCount}";
-                    _viewModel.AddActivity(
-                        "自动 Harvest",
-                        $"{result.Meta.Lifecycle} · {result.Meta.MessageCount} messages",
-                        "Vault");
-                }
-            });
-        };
+        _supervisor.JobExited += job => _ = AutoHarvestExitedJobAsync(job);
         _injectProjector = new InjectProjector(_injectSink);
         _launcher.ControlCreated += OnTerminalCreated;
 
@@ -138,7 +119,7 @@ public partial class MainWindow : Window
         _pollTimer.Tick += (_, _) => RefreshStructuredIfNeeded();
         _pollTimer.Start();
 
-        Loaded += (_, _) => RefreshArchiveEntries();
+        Loaded += (_, _) => _ = RefreshArchiveEntriesAsync();
         Closed += (_, _) =>
         {
             _agentTaskCancellation?.Cancel();
@@ -151,6 +132,52 @@ public partial class MainWindow : Window
 
     private string CurrentProjectId()
         => _currentProject?.Id ?? throw new InvalidOperationException("No current project");
+
+    private async Task AutoHarvestExitedJobAsync(Job job)
+    {
+        HarvestResult? result = null;
+        string? error = null;
+        try
+        {
+            var capture = _supervisor.GetCapture(job.Id);
+            result = await Task.Run(() =>
+            {
+                using var index = new VaultIndex(_vaultPaths);
+                var autoHarvester = new JobAutoHarvester(
+                    new Harvester(_vaultPaths, index),
+                    _distiller.Captures,
+                    new ArchiveCatalog());
+                return autoHarvester.TryHarvest(job, capture);
+            });
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+
+        if (Dispatcher.HasShutdownStarted) return;
+        await Dispatcher.InvokeAsync(() =>
+        {
+            RefreshJobs();
+            _viewModel.AddActivity(
+                "Job 已结束",
+                $"{job.Provider} · exit {job.ExitCode?.ToString() ?? "?"} · {job.Id[..8]}",
+                "Job");
+            if (result is not null)
+            {
+                StructuredStatus.Text =
+                    $"Auto-Harvest {result.Meta.Lifecycle} · {result.Meta.SessionId} · msgs={result.Meta.MessageCount}";
+                _viewModel.AddActivity(
+                    "自动 Harvest",
+                    $"{result.Meta.Lifecycle} · {result.Meta.MessageCount} messages",
+                    "Vault");
+            }
+            else if (error is not null)
+            {
+                StructuredStatus.Text = "Auto-Harvest: " + error;
+            }
+        });
+    }
 
     private void SelectWorkspace(string root)
     {
@@ -338,7 +365,7 @@ public partial class MainWindow : Window
                 break;
             case "sessions":
                 SetFeatureHeader("SESSIONS", "会话", "集中选择归档源、恢复会话、Harvest、Distill 与迁移。");
-                RefreshArchiveEntries();
+                _ = RefreshArchiveEntriesAsync();
                 SessionsPage.Visibility = Visibility.Visible;
                 break;
             case "vault":
@@ -346,7 +373,7 @@ public partial class MainWindow : Window
                 VaultPage.Visibility = Visibility.Visible;
                 break;
             case "memory":
-                SetFeatureHeader("MEMORY", "Memory 与 Handoff", "管理当前项目 sink，并投影到 OpenCode 或 Codex。");
+                SetFeatureHeader("MEMORY", "Memory 与 Handoff", "管理当前项目的 Vault 真源，并投影到 OpenCode 或 Codex。");
                 MemoryPage.Visibility = Visibility.Visible;
                 break;
         }
@@ -507,11 +534,109 @@ public partial class MainWindow : Window
                 .Select(pair => pair.Key)
                 .OrderBy(target => target)
                 .ToList();
+            var driftedTargets = enabledTargets
+                .Where(target => _skillInstaller.IsTargetDrifted(record.SkillId, target))
+                .ToList();
             _viewModel.Skills.Add(new WorkbenchSkill(
                 record.SkillId,
                 record.SourcePath,
                 enabledTargets.Count == 0 ? "未启用" : string.Join(" · ", enabledTargets),
-                enabledTargets.Count == 0 ? "Disabled" : "Enabled"));
+                driftedTargets.Count > 0
+                    ? "Drifted: " + string.Join(" · ", driftedTargets)
+                    : enabledTargets.Count == 0 ? "Disabled" : "Enabled",
+                driftedTargets.Count > 0 ? "#F2B84B" : enabledTargets.Count == 0 ? "#708097" : "#4CC38A"));
+        }
+    }
+
+    private string SelectedSkillTool()
+        => (SkillToolBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "opencode";
+
+    private void SkillBrowse_OnClick(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "选择 Skill 的 SKILL.md",
+            Filter = "Skill manifest (SKILL.md)|SKILL.md",
+            CheckFileExists = true,
+            Multiselect = false
+        };
+        if (dialog.ShowDialog() == true)
+            SkillSourceBox.Text = Path.GetDirectoryName(dialog.FileName) ?? "";
+    }
+
+    private void SkillInstall_OnClick(object sender, RoutedEventArgs e)
+    {
+        var source = SkillSourceBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(source) || !File.Exists(Path.Combine(source, "SKILL.md")))
+        {
+            SkillActionStatus.Text = "请选择包含 SKILL.md 的目录";
+            return;
+        }
+
+        var skillId = Path.GetFileName(Path.TrimEndingDirectorySeparator(Path.GetFullPath(source)));
+        var tool = SelectedSkillTool();
+        RunSkillAction(
+            () => _skillInstaller.Enable(skillId, source, tool),
+            $"已为 {tool} 安装 {skillId}");
+    }
+
+    private void SkillEnable_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string skillId }) return;
+        var records = new SkillManifestStore().Load();
+        if (!records.TryGetValue(skillId, out var record))
+        {
+            SkillActionStatus.Text = "manifest 中找不到 Skill: " + skillId;
+            return;
+        }
+
+        var tool = SelectedSkillTool();
+        RunSkillAction(
+            () => _skillInstaller.Enable(skillId, record.SourcePath, tool),
+            $"已为 {tool} 启用 {skillId}");
+    }
+
+    private void SkillDisable_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string skillId }) return;
+        var tool = SelectedSkillTool();
+        var records = new SkillManifestStore().Load();
+        if (!records.TryGetValue(skillId, out var record)
+            || !record.Tools.TryGetValue(tool, out var install)
+            || !install.Enabled)
+        {
+            SkillActionStatus.Text = $"{skillId} 未对 {tool} 启用";
+            return;
+        }
+
+        RunSkillAction(
+            () => _skillInstaller.Disable(skillId, tool),
+            $"已为 {tool} 停用 {skillId}");
+    }
+
+    private void SkillRepair_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string skillId }) return;
+        var tool = SelectedSkillTool();
+        RunSkillAction(
+            () => _skillInstaller.Repair(skillId, tool),
+            $"已修复 {tool}/{skillId}；旧目标保留为同级 drift 备份");
+    }
+
+    private void RunSkillAction(Action action, string success)
+    {
+        try
+        {
+            action();
+            LoadManagedSkills();
+            SkillActionStatus.Foreground = (Brush)FindResource("Success");
+            SkillActionStatus.Text = success;
+        }
+        catch (Exception ex)
+        {
+            LoadManagedSkills();
+            SkillActionStatus.Foreground = (Brush)FindResource("Warning");
+            SkillActionStatus.Text = ex.Message;
         }
     }
 
@@ -559,7 +684,12 @@ public partial class MainWindow : Window
     private IArchiveSource? SelectedArchive()
         => ArchiveSourceBox.SelectedItem as IArchiveSource;
 
-    private async void Start_OnClick(object sender, RoutedEventArgs e)
+    private bool IsSelectedSession(SessionRow expected)
+        => SessionList.SelectedItem is SessionRow current
+           && current.Id == expected.Id
+           && current.Provider == expected.Provider;
+
+    private void Start_OnClick(object sender, RoutedEventArgs e)
     {
         try
         {
@@ -580,8 +710,7 @@ public partial class MainWindow : Window
             MessageBox.Show(ex.Message, "Start failed");
         }
 
-        await Task.CompletedTask;
-        RefreshArchiveEntries();
+        _ = RefreshArchiveEntriesAsync();
     }
 
     private void Resume_OnClick(object sender, RoutedEventArgs e)
@@ -610,7 +739,7 @@ public partial class MainWindow : Window
             _structuredSourceId = row.Provider;
             _structuredPath = row.Cwd;
             RefreshJobs();
-            LoadStructured(force: true);
+            _ = LoadStructuredAsync(force: true);
         }
         catch (Exception ex)
         {
@@ -633,7 +762,7 @@ public partial class MainWindow : Window
     private void Refresh_OnClick(object sender, RoutedEventArgs e)
     {
         RefreshWorkspaceData();
-        RefreshArchiveEntries();
+        _ = RefreshArchiveEntriesAsync();
     }
 
     private void BrowseCwd_OnClick(object sender, RoutedEventArgs e)
@@ -652,7 +781,15 @@ public partial class MainWindow : Window
     private void ArchiveSourceBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (IsLoaded)
-            RefreshArchiveEntries();
+        {
+            Interlocked.Increment(ref _structuredLoadVersion);
+            _structuredLoadInFlight = false;
+            _structuredEntryId = null;
+            _structuredSourceId = null;
+            _structuredPath = null;
+            Messages.Clear();
+            _ = RefreshArchiveEntriesAsync();
+        }
     }
 
     private void SessionList_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -663,7 +800,7 @@ public partial class MainWindow : Window
         _structuredPath = row.Cwd;
         if (!string.IsNullOrEmpty(row.Cwd) && Directory.Exists(row.Cwd))
             SelectWorkspace(row.Cwd);
-        LoadStructured(force: true);
+        _ = LoadStructuredAsync(force: true);
     }
 
     private void OpenSelectedSession_OnClick(object sender, RoutedEventArgs e)
@@ -692,18 +829,29 @@ public partial class MainWindow : Window
         try
         {
             var projectId = CurrentProjectId();
-            var msgs = src.GetMessages(row.Id);
-            var harvest = _harvester.IngestFromArchive(projectId, src,
-                new ArchiveEntry(row.Id, row.Provider, row.Title, row.Cwd, DateTimeOffset.UtcNow, "session"));
-
             var provider = SelectedProvider();
+            var cwd = string.IsNullOrWhiteSpace(CwdBox.Text)
+                ? Environment.CurrentDirectory
+                : CwdBox.Text.Trim();
+            var entry = new ArchiveEntry(
+                row.Id, row.Provider, row.Title, row.Cwd, DateTimeOffset.UtcNow, "session");
+            StructuredStatus.Text = $"读取 {src.DisplayName} 会话…";
+            var work = await Task.Run(() =>
+            {
+                var messages = src.GetMessages(row.Id);
+                using var index = new VaultIndex(_vaultPaths);
+                var harvest = new Harvester(_vaultPaths, index)
+                    .IngestFromArchive(projectId, src, entry, messages);
+                return (Messages: messages, Harvest: harvest);
+            });
+            var msgs = work.Messages;
+            var harvest = work.Harvest;
+
             DistillArtifact art;
             if (provider is "cursor-agent" or "opencode" or "codex" or "claude")
             {
-                var cwd = string.IsNullOrWhiteSpace(CwdBox.Text)
-                    ? Environment.CurrentDirectory
-                    : CwdBox.Text.Trim();
-                StructuredStatus.Text = $"Distill via {provider}…";
+                if (IsSelectedSession(row))
+                    StructuredStatus.Text = $"Distill via {provider}…";
                 art = await _distiller.DistillViaCliAsync(
                     provider, projectId, harvest.Meta.SessionId, cwd, msgs, _headless);
             }
@@ -712,13 +860,23 @@ public partial class MainWindow : Window
                 art = _distiller.ProposeSummary(projectId, harvest.Meta.SessionId, msgs);
             }
 
-            StructuredStatus.Text = $"Distill 入队 Pending · {art.Id[..8]}…（请打开审阅队列）";
-            var review = new ReviewWindow(_distiller, _harvester) { Owner = this };
-            review.Show();
+            if (IsSelectedSession(row))
+            {
+                StructuredStatus.Text = $"Distill 入队 Pending · {art.Id[..8]}…（请打开审阅队列）";
+                var review = new ReviewWindow(_distiller, _harvester) { Owner = this };
+                review.Show();
+            }
+            else
+            {
+                _viewModel.AddActivity("Distill 已入队", $"{row.Provider} · {row.Id}", "Vault");
+            }
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "Distill failed");
+            if (IsSelectedSession(row))
+                MessageBox.Show(ex.Message, "Distill failed");
+            else
+                _viewModel.AddActivity("Distill 失败", ex.Message, "Vault");
         }
     }
 
@@ -778,7 +936,7 @@ public partial class MainWindow : Window
         VaultSearchStatus.Text = $"{hits.Count} hits for «{q}»";
     }
 
-    private void Harvest_OnClick(object sender, RoutedEventArgs e)
+    private async void Harvest_OnClick(object sender, RoutedEventArgs e)
     {
         if (SessionList.SelectedItem is not SessionRow row)
         {
@@ -798,7 +956,21 @@ public partial class MainWindow : Window
             var entry = new ArchiveEntry(
                 row.Id, row.Provider, row.Title, row.Cwd, DateTimeOffset.UtcNow, "session");
             var projectId = CurrentProjectId();
-            var result = _harvester.IngestFromArchive(projectId, src, entry);
+            StructuredStatus.Text = $"Harvest {src.DisplayName}…";
+            var result = await Task.Run(() =>
+            {
+                using var index = new VaultIndex(_vaultPaths);
+                return new Harvester(_vaultPaths, index).IngestFromArchive(projectId, src, entry);
+            });
+            if (!IsSelectedSession(row))
+            {
+                _viewModel.AddActivity(
+                    "Harvest 完成",
+                    $"{row.Provider} · {row.Id} · {result.Meta.Lifecycle}",
+                    "Vault");
+                return;
+            }
+
             StructuredStatus.Text =
                 $"Harvest {result.Meta.Lifecycle} · msgs={result.Meta.MessageCount} · {result.SessionDir}";
             if (result.Meta.Lifecycle == SessionLifecycle.IngestError)
@@ -806,7 +978,10 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "Harvest failed");
+            if (IsSelectedSession(row))
+                MessageBox.Show(ex.Message, "Harvest failed");
+            else
+                _viewModel.AddActivity("Harvest 失败", ex.Message, "Vault");
         }
     }
 
@@ -836,8 +1011,9 @@ public partial class MainWindow : Window
         });
     }
 
-    private void RefreshArchiveEntries()
+    private async Task RefreshArchiveEntriesAsync()
     {
+        var version = Interlocked.Increment(ref _archiveRefreshVersion);
         Sessions.Clear();
         var src = SelectedArchive();
         if (src is null)
@@ -848,7 +1024,12 @@ public partial class MainWindow : Window
 
         try
         {
-            foreach (var e in src.List(100))
+            StructuredStatus.Text = $"正在读取 {src.DisplayName}…";
+            var entries = await Task.Run(() => src.List(100));
+            if (version != _archiveRefreshVersion || !ReferenceEquals(SelectedArchive(), src))
+                return;
+
+            foreach (var e in entries)
             {
                 Sessions.Add(new SessionRow(
                     e.Id,
@@ -861,10 +1042,12 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            StructuredStatus.Text = "Archive: " + ex.Message;
+            if (version == _archiveRefreshVersion)
+                StructuredStatus.Text = "Archive: " + ex.Message;
         }
 
-        RefreshJobs();
+        if (version == _archiveRefreshVersion)
+            RefreshJobs();
     }
 
     private void RefreshJobs()
@@ -895,34 +1078,59 @@ public partial class MainWindow : Window
     private void RefreshStructuredIfNeeded()
     {
         if (_structuredEntryId is null || _structuredSourceId is null) return;
-        LoadStructured(force: false);
+        _ = LoadStructuredAsync(force: false);
     }
 
-    private void LoadStructured(bool force)
+    private async Task LoadStructuredAsync(bool force)
     {
         if (_structuredEntryId is null || _structuredSourceId is null) return;
-        var src = _archives.Get(_structuredSourceId);
+        if (!force && _structuredLoadInFlight) return;
+
+        var entryId = _structuredEntryId;
+        var sourceId = _structuredSourceId;
+        var path = _structuredPath;
+        var previousMtime = _structuredMtime;
+        var src = _archives.Get(sourceId);
         if (src is null) return;
 
+        var version = Interlocked.Increment(ref _structuredLoadVersion);
+        _structuredLoadInFlight = true;
         try
         {
-            DateTime mtime = DateTime.UtcNow;
-            if (!string.IsNullOrEmpty(_structuredPath) && File.Exists(_structuredPath))
-                mtime = File.GetLastWriteTimeUtc(_structuredPath);
-            else if (!string.IsNullOrEmpty(_structuredPath) && Directory.Exists(_structuredPath))
-                mtime = Directory.GetLastWriteTimeUtc(_structuredPath);
+            var result = await Task.Run(() =>
+            {
+                var mtime = DateTime.UtcNow;
+                if (!string.IsNullOrEmpty(path) && File.Exists(path))
+                    mtime = File.GetLastWriteTimeUtc(path);
+                else if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
+                    mtime = Directory.GetLastWriteTimeUtc(path);
 
-            if (!force && mtime == _structuredMtime) return;
-            _structuredMtime = mtime;
+                var changed = force || mtime != previousMtime;
+                IReadOnlyList<CanonicalMessage> messages = changed ? src.GetMessages(entryId) : [];
+                return (Mtime: mtime, Changed: changed, Messages: messages);
+            });
 
-            var msgs = src.GetMessages(_structuredEntryId);
-            BindMessages(msgs);
+            if (version != _structuredLoadVersion
+                || _structuredEntryId != entryId
+                || _structuredSourceId != sourceId
+                || !ReferenceEquals(SelectedArchive(), src)
+                || !result.Changed)
+                return;
+
+            _structuredMtime = result.Mtime;
+            BindMessages(result.Messages);
             StructuredStatus.Text =
-                $"{src.DisplayName} · {_structuredEntryId} · {msgs.Count} · {mtime:HH:mm:ss}Z";
+                $"{src.DisplayName} · {entryId} · {result.Messages.Count} · {result.Mtime:HH:mm:ss}Z";
         }
         catch (Exception ex)
         {
-            StructuredStatus.Text = "Structured: " + ex.Message;
+            if (version == _structuredLoadVersion)
+                StructuredStatus.Text = "Structured: " + ex.Message;
+        }
+        finally
+        {
+            if (version == _structuredLoadVersion)
+                _structuredLoadInFlight = false;
         }
     }
 
@@ -938,7 +1146,7 @@ public partial class MainWindow : Window
         var pid = CurrentProjectId();
         _injectSink.Write(pid, InjectKind.Memory, InjectMemoryBox.Text);
         _injectSink.Write(pid, InjectKind.Handoff, InjectHandoffBox.Text);
-        InjectStatus.Text = $"已写入 sink: {_injectSink.ProjectDir(pid)}";
+        InjectStatus.Text = $"已写入 Vault: {_injectSink.ProjectDir(pid)}";
     }
 
     private void InjectProjectOpenCode_OnClick(object sender, RoutedEventArgs e)

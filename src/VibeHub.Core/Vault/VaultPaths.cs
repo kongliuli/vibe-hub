@@ -11,7 +11,9 @@ public sealed class VaultPaths
 
     public string Root { get; }
 
-    public string ProjectDir(string projectId) => Path.Combine(Root, "projects", Sanitize(projectId));
+    public string ProjectsRoot => Path.Combine(Root, "projects");
+
+    public string ProjectDir(string projectId) => Path.Combine(ProjectsRoot, Sanitize(projectId));
 
     public string SessionDir(string projectId, string sessionId)
         => Path.Combine(ProjectDir(projectId), "sessions", Sanitize(sessionId));

@@ -10,12 +10,13 @@ public sealed class CodexAdapter : IProviderAdapter
 
     public string ProviderId => "codex";
 
-    public string SessionsRoot => Path.Combine(
+    public string SessionsRoot => SessionsRootOverride ?? Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
         ".codex", "sessions");
 
     /// <summary>Optional override for tests (path to node + codex.js).</summary>
     public string? CodexJsPath { get; set; }
+    public string? SessionsRootOverride { get; set; }
 
     public bool Discover()
     {

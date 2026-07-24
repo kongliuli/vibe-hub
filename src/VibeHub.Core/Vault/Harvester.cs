@@ -126,9 +126,13 @@ public sealed class Harvester
     }
 
     /// <summary>Harvest from an archive source entry (copy Path if file + GetMessages).</summary>
-    public HarvestResult IngestFromArchive(string projectId, IArchiveSource source, ArchiveEntry entry)
+    public HarvestResult IngestFromArchive(
+        string projectId,
+        IArchiveSource source,
+        ArchiveEntry entry,
+        IReadOnlyList<CanonicalMessage>? messages = null)
     {
-        var msgs = source.GetMessages(entry.Id);
+        var msgs = messages ?? source.GetMessages(entry.Id);
         var tempDir = Path.Combine(Path.GetTempPath(), "vibe-hub", Guid.NewGuid().ToString("n"));
         var exported = Path.Combine(tempDir, "session.jsonl");
         var sourcePath = entry.Path is not null && File.Exists(entry.Path) ? entry.Path : null;

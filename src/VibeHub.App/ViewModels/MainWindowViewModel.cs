@@ -57,4 +57,4 @@ public sealed record WorkbenchTask(string Id, string Title, string Status, strin
 public sealed record WorkbenchAgent(string ProviderId, string Name, string Status, string Description, string StatusColor);
 public sealed record WorkbenchActivity(string Title, string Detail, string Time, string Kind);
 public sealed record WorkbenchChange(string Path, string Added, string Removed);
-public sealed record WorkbenchSkill(string Name, string Source, string Targets, string Status);
+public sealed record WorkbenchSkill(string Name, string Source, string Targets, string Status, string StatusColor);
