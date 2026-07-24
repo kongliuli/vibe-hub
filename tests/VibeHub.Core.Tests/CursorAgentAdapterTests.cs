@@ -54,7 +54,7 @@ public sealed class CursorAgentAdapterTests
             using var store = new HubStore(db);
             var adapter = new CursorAgentAdapter { CliPathOverride = fake };
             var supervisor = new JobSupervisor(launcher, [adapter], store);
-            supervisor.Start("cursor-agent", Path.GetTempPath());
+            supervisor.Start("project", "cursor-agent", Path.GetTempPath());
 
             Assert.NotNull(captured);
             Assert.Equal(fake, captured!.FileName);

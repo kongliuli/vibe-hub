@@ -10,16 +10,13 @@ public sealed class JobAutoHarvester
     private readonly Harvester _harvester;
     private readonly StreamJsonCaptureStore _captures;
     private readonly ArchiveCatalog _archives;
-    private readonly Func<string> _projectId;
 
     public JobAutoHarvester(
         Harvester harvester,
-        Func<string> projectId,
         StreamJsonCaptureStore? captures = null,
         ArchiveCatalog? archives = null)
     {
         _harvester = harvester;
-        _projectId = projectId;
         _captures = captures ?? new StreamJsonCaptureStore();
         _archives = archives ?? new ArchiveCatalog();
     }
@@ -28,8 +25,9 @@ public sealed class JobAutoHarvester
 
     public HarvestResult? TryHarvest(Job job, string? capturePath = null)
     {
-        var projectId = _projectId();
-        capturePath ??= null;
+        if (string.IsNullOrWhiteSpace(job.ProjectId))
+            return null;
+        var projectId = job.ProjectId;
 
         if (!string.IsNullOrEmpty(capturePath) && File.Exists(capturePath))
             return HarvestCapture(projectId, job, capturePath);
@@ -50,11 +48,6 @@ public sealed class JobAutoHarvester
                 return result;
             }
         }
-
-        // latest capture for this provider (interactive Start often has no SessionId yet)
-        var latest = _captures.List(job.Provider, 1).FirstOrDefault();
-        if (latest is not null && (DateTimeOffset.UtcNow - latest.UpdatedAt).TotalHours < 2)
-            return HarvestCapture(projectId, job, latest.Path);
 
         return null;
     }

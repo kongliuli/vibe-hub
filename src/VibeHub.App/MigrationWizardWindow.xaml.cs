@@ -102,7 +102,7 @@ public partial class MigrationWizardWindow : Window
                 Project_OnClick(sender, e);
 
             var cwd = CwdBox.Text.Trim();
-            var job = _supervisor.Start(target, cwd);
+            var job = _supervisor.Start(ProjectBox.Text.Trim(), target, cwd);
             MessageBox.Show($"已开 Job {job.Id[..8]}… ({target})", "迁移");
             DialogResult = true;
             Close();

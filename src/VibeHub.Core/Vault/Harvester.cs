@@ -85,10 +85,10 @@ public sealed class Harvester
             }
 
             var canonicalHash = Sha256File(canonicalPath);
-            if (req.Messages.Count == 0 && rawHash is null)
+            if (req.Messages.Count == 0)
             {
                 meta.Lifecycle = SessionLifecycle.IngestError;
-                meta.Error = "no raw source and no messages";
+                meta.Error = rawHash is null ? "no raw source and no messages" : "no canonical messages";
             }
             else
             {
@@ -129,15 +129,37 @@ public sealed class Harvester
     public HarvestResult IngestFromArchive(string projectId, IArchiveSource source, ArchiveEntry entry)
     {
         var msgs = source.GetMessages(entry.Id);
-        return Ingest(new HarvestRequest
+        var tempDir = Path.Combine(Path.GetTempPath(), "vibe-hub", Guid.NewGuid().ToString("n"));
+        var exported = Path.Combine(tempDir, "session.jsonl");
+        var sourcePath = entry.Path is not null && File.Exists(entry.Path) ? entry.Path : null;
+        try
         {
-            ProjectId = projectId,
-            SessionId = entry.Id.Length > 80 ? ManagedBlock.Sha256Hex(entry.Id)[..16] : entry.Id,
-            Provider = entry.SourceId,
-            SourcePath = entry.Path is not null && File.Exists(entry.Path) ? entry.Path : null,
-            ResumeToken = entry.Id,
-            Messages = msgs
-        });
+            Directory.CreateDirectory(tempDir);
+            if (source.ExportRawSession(entry.Id, exported))
+                sourcePath = exported;
+            return Ingest(new HarvestRequest
+            {
+                ProjectId = projectId,
+                SessionId = entry.Id.Length > 80 ? ManagedBlock.Sha256Hex(entry.Id)[..16] : entry.Id,
+                Provider = entry.SourceId,
+                SourcePath = sourcePath,
+                ResumeToken = entry.Id,
+                Messages = msgs
+            });
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
     }
 
     public SessionMeta? ReadMeta(string projectId, string sessionId)

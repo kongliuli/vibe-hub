@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using NSubstitute;
 using VibeHub.Core.Adapters;
 using VibeHub.Core.Models;
@@ -8,6 +9,30 @@ namespace VibeHub.Core.Tests;
 
 public sealed class JobSupervisorTests
 {
+    [Fact]
+    public void HubStore_MigratesLegacyJobTable()
+    {
+        var db = NewDatabasePath();
+        try
+        {
+            using (var legacy = new SqliteConnection($"Data Source={db}"))
+            {
+                legacy.Open();
+                using var command = legacy.CreateCommand();
+                command.CommandText = "CREATE TABLE job (id TEXT PRIMARY KEY, provider TEXT NOT NULL, cwd TEXT NOT NULL, session_id TEXT, pid INTEGER, state TEXT NOT NULL, exit_code INTEGER, started_at TEXT NOT NULL)";
+                command.ExecuteNonQuery();
+            }
+
+            using var store = new HubStore(db);
+            store.UpsertJob(new Job { Id = "new", ProjectId = "project", Provider = "opencode", Cwd = "C:\\work" });
+            Assert.Equal("project", store.GetJob("new")!.ProjectId);
+        }
+        finally
+        {
+            DeleteDatabase(db);
+        }
+    }
+
     [Fact]
     public void Start_PassesCorrectCwdAndArgs_ForOpenCode()
     {
@@ -24,7 +49,7 @@ public sealed class JobSupervisorTests
             var supervisor = new JobSupervisor(launcher, [new FakeOpenCodeAdapter()], store);
 
             var cwd = Path.GetTempPath().TrimEnd('\\', '/');
-            var job = supervisor.Start("opencode", cwd);
+            var job = supervisor.Start("project-1", "opencode", cwd);
 
             Assert.Equal(JobState.Running, job.State);
             Assert.Equal(4242, job.Pid);
@@ -33,6 +58,7 @@ public sealed class JobSupervisorTests
             Assert.Empty(captured.Arguments);
             Assert.Equal(Path.GetFullPath(cwd), Path.GetFullPath(captured.WorkingDirectory));
             Assert.Equal(JobState.Running, store.GetJob(job.Id)!.State);
+            Assert.Equal("project-1", store.GetJob(job.Id)!.ProjectId);
         }
         finally
         {
@@ -56,7 +82,7 @@ public sealed class JobSupervisorTests
             Job? exited = null;
             supervisor.JobExited += j => exited = j;
 
-            var job = supervisor.Start("opencode", Path.GetTempPath());
+            var job = supervisor.Start("project", "opencode", Path.GetTempPath());
             pty.Exited += Raise.Event<Action>();
 
             Assert.NotNull(exited);
@@ -81,7 +107,7 @@ public sealed class JobSupervisorTests
         {
             using var store = new HubStore(db);
             var supervisor = new JobSupervisor(launcher, [new FakeOpenCodeAdapter()], store);
-            var job = supervisor.Start("opencode", Path.GetTempPath());
+            var job = supervisor.Start("project", "opencode", Path.GetTempPath());
 
             Assert.Null(job.Pid);
             pty.ProcessId.Returns(7319);
@@ -112,8 +138,8 @@ public sealed class JobSupervisorTests
             var launched = new List<(string JobId, IPseudoTerminal Terminal)>();
             supervisor.JobLaunched += (job, terminal) => launched.Add((job.Id, terminal));
 
-            var firstJob = supervisor.Start("opencode", Path.GetTempPath());
-            var secondJob = supervisor.Start("opencode", Path.GetTempPath());
+            var firstJob = supervisor.Start("project", "opencode", Path.GetTempPath());
+            var secondJob = supervisor.Start("project", "opencode", Path.GetTempPath());
 
             Assert.Equal(2, launched.Count);
             Assert.Equal((firstJob.Id, first), launched[0]);
@@ -141,7 +167,7 @@ public sealed class JobSupervisorTests
             var supervisor = new JobSupervisor(launcher, [new FakeOpenCodeAdapter()], store);
             var exitEvents = 0;
             supervisor.JobExited += _ => exitEvents++;
-            var job = supervisor.Start("opencode", Path.GetTempPath());
+            var job = supervisor.Start("project", "opencode", Path.GetTempPath());
 
             pty.Exited += Raise.Event<Action>();
             pty.Exited += Raise.Event<Action>();
@@ -175,7 +201,7 @@ public sealed class JobSupervisorTests
             var supervisor = new JobSupervisor(launcher, [new FakeOpenCodeAdapter()], store);
             var exitEvents = 0;
             supervisor.JobExited += _ => exitEvents++;
-            var job = supervisor.Start("opencode", Path.GetTempPath());
+            var job = supervisor.Start("project", "opencode", Path.GetTempPath());
 
             supervisor.Kill(job.Id);
             pty.Exited += Raise.Event<Action>();
@@ -208,7 +234,7 @@ public sealed class JobSupervisorTests
             using var store = new HubStore(db);
             var supervisor = new JobSupervisor(launcher, [new FakeOpenCodeAdapter()], store);
 
-            var job = supervisor.Start("opencode", Path.GetTempPath());
+            var job = supervisor.Start("project", "opencode", Path.GetTempPath());
 
             Assert.Equal(JobState.Exited, job.State);
             Assert.Equal(3, job.ExitCode);
@@ -235,11 +261,12 @@ public sealed class JobSupervisorTests
             var supervisor = new JobSupervisor(launcher, [new FakeOpenCodeAdapter()], store);
 
             var cwd = Path.GetTempPath().TrimEnd('\\', '/');
-            supervisor.Resume("opencode", cwd, "ses_abc");
+            var job = supervisor.Resume("project-2", "opencode", cwd, "ses_abc");
 
             Assert.NotNull(captured);
             Assert.Equal(["-s", "ses_abc"], captured!.Arguments);
             Assert.Equal(Path.GetFullPath(cwd), Path.GetFullPath(captured.WorkingDirectory));
+            Assert.Equal("project-2", store.GetJob(job.Id)!.ProjectId);
         }
         finally
         {

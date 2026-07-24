@@ -29,17 +29,30 @@ public sealed class SkillInstaller
         if (!Directory.Exists(sourceDir))
             throw new DirectoryNotFoundException(sourceDir);
 
-        var targetRoot = targetRootOverride ?? ToolSkillsRoot(toolId);
-        var target = Path.Combine(targetRoot, skillId);
+        var targetRoot = Path.GetFullPath(targetRootOverride ?? ToolSkillsRoot(toolId));
+        var target = ResolveTarget(targetRoot, skillId);
         Directory.CreateDirectory(targetRoot);
 
-        if (Directory.Exists(target))
-            Directory.Delete(target, recursive: true);
-
-        CopyDirectory(sourceDir, target);
-        var hash = HashDirectory(sourceDir);
-
         var all = _store.Load();
+        ToolInstall? current = null;
+        if (all.TryGetValue(skillId, out var existing))
+            existing.Tools.TryGetValue(toolId, out current);
+
+        var hash = HashDirectory(sourceDir);
+        if (Directory.Exists(target))
+        {
+            if (current is null
+                || !current.Enabled
+                || !SamePath(current.TargetPath, target)
+                || string.IsNullOrEmpty(current.InstalledHash)
+                || !string.Equals(HashDirectory(target), current.InstalledHash, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"Skill target is unmanaged or drifted; refusing to overwrite: {target}");
+            }
+        }
+
+        ReplaceDirectory(sourceDir, target, targetRoot);
         if (!all.TryGetValue(skillId, out var rec))
         {
             rec = new SkillRecord { SkillId = skillId, SourcePath = Path.GetFullPath(sourceDir) };
@@ -59,14 +72,28 @@ public sealed class SkillInstaller
         return target;
     }
 
-    public void Disable(string skillId, string toolId)
+    public void Disable(string skillId, string toolId, string? targetRootOverride = null)
     {
         var all = _store.Load();
         if (!all.TryGetValue(skillId, out var rec)) return;
         if (!rec.Tools.TryGetValue(toolId, out var inst)) return;
 
+        var targetRoot = Path.GetFullPath(targetRootOverride ?? ToolSkillsRoot(toolId));
+        var target = ResolveTarget(targetRoot, skillId);
+        if (!SamePath(inst.TargetPath, target))
+            throw new InvalidOperationException($"Skill target is outside its configured root: {inst.TargetPath}");
+
         if (Directory.Exists(inst.TargetPath))
+        {
+            if (string.IsNullOrEmpty(inst.InstalledHash)
+                || !string.Equals(HashDirectory(inst.TargetPath), inst.InstalledHash, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"Skill target has local changes; refusing to delete: {inst.TargetPath}");
+            }
+
             Directory.Delete(inst.TargetPath, recursive: true);
+        }
 
         inst.Enabled = false;
         inst.InstalledHash = null;
@@ -91,6 +118,75 @@ public sealed class SkillInstaller
         foreach (var dir in Directory.EnumerateDirectories(src))
             CopyDirectory(dir, Path.Combine(dst, Path.GetFileName(dir)));
     }
+
+    private static string ResolveTarget(string targetRoot, string skillId)
+    {
+        if (string.IsNullOrWhiteSpace(skillId))
+            throw new ArgumentException("Skill id is required", nameof(skillId));
+
+        var target = Path.GetFullPath(Path.Combine(targetRoot, skillId));
+        var relative = Path.GetRelativePath(targetRoot, target);
+        if (Path.IsPathRooted(relative)
+            || relative.Equals(".", StringComparison.Ordinal)
+            || relative.Equals("..", StringComparison.Ordinal)
+            || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal)
+            || relative.Contains(Path.DirectorySeparatorChar)
+            || relative.Contains(Path.AltDirectorySeparatorChar))
+        {
+            throw new ArgumentException("Skill id must be a single directory name", nameof(skillId));
+        }
+
+        return target;
+    }
+
+    private static void ReplaceDirectory(string source, string target, string targetRoot)
+    {
+        var suffix = Guid.NewGuid().ToString("n");
+        var stage = Path.Combine(targetRoot, $".vibe-hub-stage-{suffix}");
+        var backup = Path.Combine(targetRoot, $".vibe-hub-backup-{suffix}");
+
+        try
+        {
+            CopyDirectory(source, stage);
+            if (Directory.Exists(target))
+                Directory.Move(target, backup);
+
+            Directory.Move(stage, target);
+            if (Directory.Exists(backup))
+                TryDeleteDirectory(backup);
+        }
+        catch
+        {
+            if (!Directory.Exists(target) && Directory.Exists(backup))
+                Directory.Move(backup, target);
+            throw;
+        }
+        finally
+        {
+            if (Directory.Exists(stage))
+                TryDeleteDirectory(stage);
+        }
+    }
+
+    private static void TryDeleteDirectory(string path)
+    {
+        try
+        {
+            Directory.Delete(path, recursive: true);
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
+    }
+
+    private static bool SamePath(string left, string right)
+        => string.Equals(
+            Path.GetFullPath(left).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+            Path.GetFullPath(right).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+            StringComparison.OrdinalIgnoreCase);
 
     public static string HashDirectory(string dir)
     {

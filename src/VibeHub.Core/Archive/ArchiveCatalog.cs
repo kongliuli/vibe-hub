@@ -91,6 +91,12 @@ public sealed class OpenCodeArchiveSource : IArchiveSource
         return _reader!.GetMessages(entryId, limit);
     }
 
+    public bool ExportRawSession(string entryId, string destination)
+    {
+        EnsureReader();
+        return _reader!.ExportSessionRaw(entryId, destination);
+    }
+
     private void EnsureReader()
     {
         _reader ??= new OpenCodeArchiveReader(_adapter.DbPath);

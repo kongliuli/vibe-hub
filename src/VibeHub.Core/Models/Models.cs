@@ -40,6 +40,8 @@ public enum JobState
 public sealed class Job
 {
     public required string Id { get; init; }
+    // Null only for jobs written before project ownership was introduced.
+    public string? ProjectId { get; init; }
     public required string Provider { get; init; }
     public required string Cwd { get; init; }
     public string? SessionId { get; set; }

@@ -86,7 +86,7 @@ public partial class MainWindow : Window
         _migration = new MigrationService(_vaultPaths, _injectSink);
         _supervisor = new JobSupervisor(_launcher, [_opencode, _codex, _claude, _cursorAgent], _store);
         _supervisor.JobLaunched += OnJobLaunched;
-        _autoHarvest = new JobAutoHarvester(_harvester, CurrentProjectId, _distiller.Captures, _archives);
+        _autoHarvest = new JobAutoHarvester(_harvester, _distiller.Captures, _archives);
         _supervisor.JobExited += job =>
         {
             Dispatcher.BeginInvoke(() =>
@@ -570,7 +570,7 @@ public partial class MainWindow : Window
                 return;
             }
 
-            var job = _supervisor.Start(SelectedProvider(), cwd);
+            var job = _supervisor.Start(CurrentProjectId(), SelectedProvider(), cwd);
             _activeJobId = job.Id;
             RefreshJobs();
             StructuredStatus.Text = $"Job {job.Id[..8]}… running ({job.Provider})";
@@ -604,7 +604,7 @@ public partial class MainWindow : Window
             var cwd = string.IsNullOrWhiteSpace(CwdBox.Text)
                 ? row.Cwd ?? Environment.CurrentDirectory
                 : CwdBox.Text.Trim();
-            var job = _supervisor.Resume(row.Provider, cwd, row.Id);
+            var job = _supervisor.Resume(CurrentProjectId(), row.Provider, cwd, row.Id);
             _activeJobId = job.Id;
             _structuredEntryId = row.Id;
             _structuredSourceId = row.Provider;

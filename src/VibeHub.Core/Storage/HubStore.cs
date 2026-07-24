@@ -48,6 +48,7 @@ public sealed class HubStore : IDisposable
             );
             CREATE TABLE IF NOT EXISTS job (
               id TEXT PRIMARY KEY,
+              project_id TEXT,
               provider TEXT NOT NULL,
               cwd TEXT NOT NULL,
               session_id TEXT,
@@ -58,6 +59,21 @@ public sealed class HubStore : IDisposable
             );
             """;
         cmd.ExecuteNonQuery();
+
+        var hasProjectId = false;
+        using (var columns = _conn.CreateCommand())
+        {
+            columns.CommandText = "PRAGMA table_info(job)";
+            using var reader = columns.ExecuteReader();
+            while (reader.Read())
+                hasProjectId |= string.Equals(reader.GetString(1), "project_id", StringComparison.OrdinalIgnoreCase);
+        }
+        if (!hasProjectId)
+        {
+            using var migrate = _conn.CreateCommand();
+            migrate.CommandText = "ALTER TABLE job ADD COLUMN project_id TEXT";
+            migrate.ExecuteNonQuery();
+        }
     }
 
     public void UpsertProject(Project p)
@@ -120,12 +136,13 @@ public sealed class HubStore : IDisposable
     {
         using var cmd = _conn.CreateCommand();
         cmd.CommandText = """
-            INSERT INTO job(id, provider, cwd, session_id, pid, state, exit_code, started_at)
-            VALUES($id,$provider,$cwd,$sid,$pid,$state,$exit,$started)
+            INSERT INTO job(id, project_id, provider, cwd, session_id, pid, state, exit_code, started_at)
+            VALUES($id,$project,$provider,$cwd,$sid,$pid,$state,$exit,$started)
             ON CONFLICT(id) DO UPDATE SET
-              session_id=$sid, pid=$pid, state=$state, exit_code=$exit
+              project_id=$project, session_id=$sid, pid=$pid, state=$state, exit_code=$exit
             """;
         cmd.Parameters.AddWithValue("$id", job.Id);
+        cmd.Parameters.AddWithValue("$project", (object?)job.ProjectId ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$provider", job.Provider);
         cmd.Parameters.AddWithValue("$cwd", job.Cwd);
         cmd.Parameters.AddWithValue("$sid", (object?)job.SessionId ?? DBNull.Value);
@@ -139,7 +156,7 @@ public sealed class HubStore : IDisposable
     public Job? GetJob(string id)
     {
         using var cmd = _conn.CreateCommand();
-        cmd.CommandText = "SELECT id, provider, cwd, session_id, pid, state, exit_code, started_at FROM job WHERE id=$id";
+        cmd.CommandText = "SELECT id, project_id, provider, cwd, session_id, pid, state, exit_code, started_at FROM job WHERE id=$id";
         cmd.Parameters.AddWithValue("$id", id);
         using var r = cmd.ExecuteReader();
         return r.Read() ? ReadJob(r) : null;
@@ -148,7 +165,7 @@ public sealed class HubStore : IDisposable
     public IReadOnlyList<Job> ListJobs()
     {
         using var cmd = _conn.CreateCommand();
-        cmd.CommandText = "SELECT id, provider, cwd, session_id, pid, state, exit_code, started_at FROM job ORDER BY started_at DESC";
+        cmd.CommandText = "SELECT id, project_id, provider, cwd, session_id, pid, state, exit_code, started_at FROM job ORDER BY started_at DESC";
         using var r = cmd.ExecuteReader();
         var list = new List<Job>();
         while (r.Read()) list.Add(ReadJob(r));
@@ -158,13 +175,14 @@ public sealed class HubStore : IDisposable
     private static Job ReadJob(SqliteDataReader r) => new()
     {
         Id = r.GetString(0),
-        Provider = r.GetString(1),
-        Cwd = r.GetString(2),
-        SessionId = r.IsDBNull(3) ? null : r.GetString(3),
-        Pid = r.IsDBNull(4) ? null : r.GetInt32(4),
-        State = Enum.Parse<JobState>(r.GetString(5)),
-        ExitCode = r.IsDBNull(6) ? null : r.GetInt32(6),
-        StartedAt = DateTimeOffset.Parse(r.GetString(7))
+        ProjectId = r.IsDBNull(1) ? null : r.GetString(1),
+        Provider = r.GetString(2),
+        Cwd = r.GetString(3),
+        SessionId = r.IsDBNull(4) ? null : r.GetString(4),
+        Pid = r.IsDBNull(5) ? null : r.GetInt32(5),
+        State = Enum.Parse<JobState>(r.GetString(6)),
+        ExitCode = r.IsDBNull(7) ? null : r.GetInt32(7),
+        StartedAt = DateTimeOffset.Parse(r.GetString(8))
     };
 
     public void Dispose() => _conn.Dispose();

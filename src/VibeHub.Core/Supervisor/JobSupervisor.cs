@@ -39,18 +39,18 @@ public sealed class JobSupervisor
         lock (_gate) return _captureByJob.TryGetValue(jobId, out var p) ? p : null;
     }
 
-    public Job Start(string providerId, string cwd)
+    public Job Start(string projectId, string providerId, string cwd)
     {
         var adapter = GetAdapter(providerId);
         var spec = adapter.BuildStart(cwd);
-        return Spawn(providerId, cwd, sessionId: null, spec);
+        return Spawn(projectId, providerId, cwd, sessionId: null, spec);
     }
 
-    public Job Resume(string providerId, string cwd, string sessionId)
+    public Job Resume(string projectId, string providerId, string cwd, string sessionId)
     {
         var adapter = GetAdapter(providerId);
         var spec = adapter.BuildResume(cwd, sessionId);
-        return Spawn(providerId, cwd, sessionId, spec);
+        return Spawn(projectId, providerId, cwd, sessionId, spec);
     }
 
     public void Kill(string jobId)
@@ -69,11 +69,15 @@ public sealed class JobSupervisor
 
     public IReadOnlyList<Job> ListJobs() => _store.ListJobs();
 
-    private Job Spawn(string providerId, string cwd, string? sessionId, ProcessStartSpec spec)
+    private Job Spawn(string projectId, string providerId, string cwd, string? sessionId, ProcessStartSpec spec)
     {
+        if (string.IsNullOrWhiteSpace(projectId))
+            throw new ArgumentException("Project id is required", nameof(projectId));
+
         var job = new Job
         {
             Id = Guid.NewGuid().ToString("n"),
+            ProjectId = projectId,
             Provider = providerId,
             Cwd = cwd,
             SessionId = sessionId,

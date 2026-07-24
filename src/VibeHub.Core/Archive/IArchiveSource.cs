@@ -17,4 +17,5 @@ public interface IArchiveSource
     bool Discover();
     IReadOnlyList<ArchiveEntry> List(int limit = 100);
     IReadOnlyList<CanonicalMessage> GetMessages(string entryId, int limit = 500);
+    bool ExportRawSession(string entryId, string destination) => false;
 }

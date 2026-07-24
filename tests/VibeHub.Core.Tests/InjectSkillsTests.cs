@@ -75,9 +75,22 @@ public sealed class InjectSkillsTests
 
             File.WriteAllText(Path.Combine(dest, "SKILL.md"), "# demo\nchanged\n");
             Assert.True(installer.IsTargetDrifted("demo-skill", "codex"));
+            Assert.Throws<InvalidOperationException>(
+                () => installer.Enable("demo-skill", source, "codex", toolRoot));
+            Assert.Throws<InvalidOperationException>(
+                () => installer.Disable("demo-skill", "codex", toolRoot));
+            Assert.True(Directory.Exists(dest));
 
-            installer.Disable("demo-skill", "codex");
+            File.WriteAllText(Path.Combine(dest, "SKILL.md"), "# demo\n");
+            installer.Disable("demo-skill", "codex", toolRoot);
             Assert.False(Directory.Exists(dest));
+
+            var outside = Path.Combine(root, "outside");
+            Assert.Throws<ArgumentException>(
+                () => installer.Enable("..\\outside", source, "codex", toolRoot));
+            Assert.False(Directory.Exists(outside));
+            Assert.Throws<ArgumentException>(
+                () => installer.Enable(".", source, "codex", toolRoot));
         }
         finally
         {

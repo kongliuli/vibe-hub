@@ -119,6 +119,51 @@ public sealed class OpenCodeArchiveReader
         });
     }
 
+    public bool ExportSessionRaw(string sessionId, string destination)
+    {
+        return WithReadOnlyConnection(conn =>
+        {
+            var dir = Path.GetDirectoryName(destination);
+            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+            using var writer = new StreamWriter(destination, append: false);
+            var wrote = false;
+            using (var session = conn.CreateCommand())
+            {
+                session.CommandText = "SELECT id, title, directory, time_created, time_updated FROM session WHERE id=$sid";
+                session.Parameters.AddWithValue("$sid", sessionId);
+                using var rows = session.ExecuteReader();
+                while (rows.Read())
+                {
+                    writer.WriteLine(JsonSerializer.Serialize(new { kind = "session", id = rows.GetString(0), title = rows.IsDBNull(1) ? null : rows.GetString(1), directory = rows.IsDBNull(2) ? null : rows.GetString(2), timeCreated = rows.IsDBNull(3) ? (long?)null : rows.GetInt64(3), timeUpdated = rows.IsDBNull(4) ? (long?)null : rows.GetInt64(4) }));
+                    wrote = true;
+                }
+            }
+            using (var message = conn.CreateCommand())
+            {
+                message.CommandText = "SELECT id, data, time_created FROM message WHERE session_id=$sid ORDER BY time_created";
+                message.Parameters.AddWithValue("$sid", sessionId);
+                using var rows = message.ExecuteReader();
+                while (rows.Read())
+                {
+                    writer.WriteLine(JsonSerializer.Serialize(new { kind = "message", id = rows.GetString(0), data = rows.IsDBNull(1) ? null : rows.GetString(1), timeCreated = rows.IsDBNull(2) ? (long?)null : rows.GetInt64(2) }));
+                    wrote = true;
+                }
+            }
+            using (var part = conn.CreateCommand())
+            {
+                part.CommandText = "SELECT p.id, p.message_id, p.data FROM part p JOIN message m ON m.id=p.message_id WHERE m.session_id=$sid ORDER BY p.id";
+                part.Parameters.AddWithValue("$sid", sessionId);
+                using var rows = part.ExecuteReader();
+                while (rows.Read())
+                {
+                    writer.WriteLine(JsonSerializer.Serialize(new { kind = "part", id = rows.GetString(0), messageId = rows.GetString(1), data = rows.IsDBNull(2) ? null : rows.GetString(2) }));
+                    wrote = true;
+                }
+            }
+            return wrote;
+        });
+    }
+
     private T WithReadOnlyConnection<T>(Func<SqliteConnection, T> action)
     {
         if (!File.Exists(_sourceDbPath))
