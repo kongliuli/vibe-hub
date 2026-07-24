@@ -172,6 +172,16 @@ public sealed class HubStore : IDisposable
         return list;
     }
 
+    public void MarkInterruptedJobsFailed()
+    {
+        using var cmd = _conn.CreateCommand();
+        cmd.CommandText = "UPDATE job SET state=$failed, pid=NULL WHERE state IN ($spawning,$running)";
+        cmd.Parameters.AddWithValue("$failed", JobState.Failed.ToString());
+        cmd.Parameters.AddWithValue("$spawning", JobState.Spawning.ToString());
+        cmd.Parameters.AddWithValue("$running", JobState.Running.ToString());
+        cmd.ExecuteNonQuery();
+    }
+
     private static Job ReadJob(SqliteDataReader r) => new()
     {
         Id = r.GetString(0),

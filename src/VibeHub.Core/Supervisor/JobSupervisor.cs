@@ -27,6 +27,7 @@ public sealed class JobSupervisor
         _launcher = launcher;
         _adapters = adapters.ToDictionary(a => a.ProviderId, StringComparer.OrdinalIgnoreCase);
         _store = store;
+        _store.MarkInterruptedJobsFailed();
     }
 
     public void RegisterCapture(string jobId, string capturePath)

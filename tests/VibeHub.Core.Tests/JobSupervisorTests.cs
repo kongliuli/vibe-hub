@@ -10,6 +10,46 @@ namespace VibeHub.Core.Tests;
 public sealed class JobSupervisorTests
 {
     [Fact]
+    public void Constructor_MarksPersistedActiveJobsFailed()
+    {
+        var db = NewDatabasePath();
+        try
+        {
+            using var store = new HubStore(db);
+            store.UpsertJob(new Job
+            {
+                Id = "interrupted", ProjectId = "project", Provider = "opencode",
+                Cwd = "C:\\work", Pid = 1234, State = JobState.Running
+            });
+            store.UpsertJob(new Job
+            {
+                Id = "spawning", ProjectId = "project", Provider = "opencode",
+                Cwd = "C:\\work", State = JobState.Spawning
+            });
+            store.UpsertJob(new Job
+            {
+                Id = "finished", ProjectId = "project", Provider = "opencode",
+                Cwd = "C:\\work", Pid = 4321, State = JobState.Exited, ExitCode = 0
+            });
+
+            _ = new JobSupervisor(
+                Substitute.For<IProcessLauncher>(),
+                [new FakeOpenCodeAdapter()],
+                store);
+
+            var interrupted = store.GetJob("interrupted")!;
+            Assert.Equal(JobState.Failed, interrupted.State);
+            Assert.Null(interrupted.Pid);
+            Assert.Equal(JobState.Failed, store.GetJob("spawning")!.State);
+            Assert.Equal(JobState.Exited, store.GetJob("finished")!.State);
+        }
+        finally
+        {
+            DeleteDatabase(db);
+        }
+    }
+
+    [Fact]
     public void HubStore_MigratesLegacyJobTable()
     {
         var db = NewDatabasePath();
