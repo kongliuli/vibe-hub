@@ -46,7 +46,7 @@
 
 - [x] 修复终端进程真实 PID、自然退出、Kill 进程树与退出码；EWTC 进程现由 watcher 跟踪，并由 Supervisor 幂等完成退出。
 - [x] 多 Job 终端切换与 Focus；Job 列表现在保留每个 EWTC 控件，并切换当前 TerminalHost 与键盘焦点。
-- [ ] 将 MainWindow 的服务编排和事件处理逐步迁移到命令/服务型 MVVM，保留 Dispatcher 边界。
+- [ ] 将 MainWindow 的服务编排和事件处理逐步迁移到稳定 MVVM，保留 Dispatcher/EWTC 边界；按 [`spec-009`](spec-009-stable-mvvm-refactor.md) 分阶段执行。
 - [x] Claude Adapter：接入 Start、`--resume <session-id>`、本地 projects JSONL 会话列表与归档读取。
 - [ ] 经用户批准启动 UI 后，复核 Claude 在 EWTC/ConPTY 下的 Windows 交互 Resume 冻结问题；上游仍有 pseudo-terminal 冻结报告。
 - [x] UI 中 Job、Harvest、Migration、Inject 统一使用当前 `HubStore.Project.Id`；Inject 内容以 Vault project 文件为真源。
@@ -60,6 +60,17 @@
 - [x] Codex 原始 rollout JSONL 进入 Vault raw。
 - [x] Skills 页面接通安装/启用、停用、漂移提示与安全修复。
 - [x] Inject sink 迁入 Vault 真源并兼容旧 LocalAppData 内容。
+
+## spec-009：MainWindow 稳定 MVVM 重构
+
+设计与验收见 [`spec-009-stable-mvvm-refactor.md`](spec-009-stable-mvvm-refactor.md)。
+
+- [ ] Phase 0：建立 App 测试护栏、手工组合根和四个子 ViewModel 空壳，不启动 WPF/ConPTY/真实 CLI。
+- [ ] Phase 1：迁移 Workspace（项目、任务、Git、Settings、当前 provider/cwd），作为后续子 ViewModel 的上下文基座。
+- [ ] Phase 2：迁移 Context（Memory/Handoff、Inject、Skills）；Dialog 留在 View。
+- [ ] Phase 3：迁移 Sessions（Archive、Structured、Harvest、Distill、Vault）；保留过期结果防倒灌和独立连接。
+- [ ] Phase 4：迁移 Jobs/Agent（Start、Resume、Kill、Run、Cancel）；EWTC 控件、TerminalHost 和焦点留在 View。
+- [ ] Phase 5：用 `CurrentPage`、命令和绑定收口 Shell；通过完整测试、Release build 与终端人工 smoke。
 
 ## UI 验证
 
