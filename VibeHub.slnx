@@ -8,6 +8,7 @@
     <Project Path="src/VibeHub.Terminal/VibeHub.Terminal.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/VibeHub.App.Tests/VibeHub.App.Tests.csproj" />
     <Project Path="tests/VibeHub.Core.Tests/VibeHub.Core.Tests.csproj" />
   </Folder>
 </Solution>

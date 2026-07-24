@@ -26,26 +26,26 @@ namespace VibeHub.App;
 
 public partial class MainWindow : Window
 {
-    private readonly MainWindowViewModel _viewModel = new();
-    private HubPreferences _preferences = HubPreferencesStore.Load();
+    private readonly MainWindowViewModel _viewModel;
+    private HubPreferences _preferences;
     private readonly HubStore _store;
-    private readonly OpenCodeAdapter _opencode = new();
-    private readonly CodexAdapter _codex = new();
-    private readonly ClaudeAdapter _claude = new();
-    private readonly CursorAgentAdapter _cursorAgent = new();
-    private readonly EwtcProcessLauncher _launcher = new();
+    private readonly OpenCodeAdapter _opencode;
+    private readonly CodexAdapter _codex;
+    private readonly ClaudeAdapter _claude;
+    private readonly CursorAgentAdapter _cursorAgent;
+    private readonly EwtcProcessLauncher _launcher;
     private readonly JobSupervisor _supervisor;
-    private readonly ArchiveCatalog _archives = new();
-    private readonly InjectSink _injectSink = new();
+    private readonly ArchiveCatalog _archives;
+    private readonly InjectSink _injectSink;
     private readonly InjectProjector _injectProjector;
-    private readonly VaultPaths _vaultPaths = new();
+    private readonly VaultPaths _vaultPaths;
     private readonly VaultIndex _vaultIndex;
     private readonly Harvester _harvester;
-    private readonly Distiller _distiller = new();
-    private readonly ProcessHeadlessRunner _headless = new();
-    private readonly GitChangesService _gitChanges = new();
+    private readonly Distiller _distiller;
+    private readonly ProcessHeadlessRunner _headless;
+    private readonly GitChangesService _gitChanges;
     private readonly MigrationService _migration;
-    private readonly SkillInstaller _skillInstaller = new();
+    private readonly SkillInstaller _skillInstaller;
     private string? _lastInjectTarget;
     private readonly DispatcherTimer _pollTimer;
     private readonly Dictionary<IPseudoTerminal, EasyTerminalControl> _pendingTerminals = new();
@@ -66,8 +66,29 @@ public partial class MainWindow : Window
     public ObservableCollection<MessageRow> Messages { get; } = new();
     public ObservableCollection<MessageRow> VaultResults { get; } = new();
 
-    public MainWindow()
+    internal MainWindow(MainWindowViewModel viewModel, AppComposition services)
     {
+        _viewModel = viewModel;
+        _preferences = services.Preferences;
+        _store = services.Store;
+        _opencode = services.OpenCode;
+        _codex = services.Codex;
+        _claude = services.Claude;
+        _cursorAgent = services.CursorAgent;
+        _launcher = services.Launcher;
+        _supervisor = services.Supervisor;
+        _archives = services.Archives;
+        _injectSink = services.InjectSink;
+        _injectProjector = services.InjectProjector;
+        _vaultPaths = services.VaultPaths;
+        _vaultIndex = services.VaultIndex;
+        _harvester = services.Harvester;
+        _distiller = services.Distiller;
+        _headless = services.Headless;
+        _gitChanges = services.GitChanges;
+        _migration = services.Migration;
+        _skillInstaller = services.SkillInstaller;
+
         InitializeComponent();
         DataContext = _viewModel;
         TerminalInputTuning.SuppressHostShortcuts(
@@ -82,15 +103,9 @@ public partial class MainWindow : Window
             ? _preferences.DefaultWorkingDirectory
             : Environment.CurrentDirectory;
 
-        _store = HubStore.OpenDefault();
         SelectWorkspace(CwdBox.Text);
-        _vaultIndex = new VaultIndex(_vaultPaths);
-        _harvester = new Harvester(_vaultPaths, _vaultIndex);
-        _migration = new MigrationService(_vaultPaths, _injectSink);
-        _supervisor = new JobSupervisor(_launcher, [_opencode, _codex, _claude, _cursorAgent], _store);
         _supervisor.JobLaunched += OnJobLaunched;
-        _supervisor.JobExited += job => _ = AutoHarvestExitedJobAsync(job);
-        _injectProjector = new InjectProjector(_injectSink);
+        _supervisor.JobExited += OnJobExited;
         _launcher.ControlCreated += OnTerminalCreated;
 
         SelectProvider(_preferences.DefaultProvider);
@@ -122,13 +137,16 @@ public partial class MainWindow : Window
         Loaded += (_, _) => _ = RefreshArchiveEntriesAsync();
         Closed += (_, _) =>
         {
+            _launcher.ControlCreated -= OnTerminalCreated;
+            _supervisor.JobLaunched -= OnJobLaunched;
+            _supervisor.JobExited -= OnJobExited;
             _agentTaskCancellation?.Cancel();
             _agentTaskCancellation?.Dispose();
             _pollTimer.Stop();
-            _vaultIndex.Dispose();
-            _store.Dispose();
         };
     }
+
+    private void OnJobExited(Job job) => _ = AutoHarvestExitedJobAsync(job);
 
     private string CurrentProjectId()
         => _currentProject?.Id ?? throw new InvalidOperationException("No current project");
@@ -321,6 +339,7 @@ public partial class MainWindow : Window
 
     private void NavigateTo(string page)
     {
+        _viewModel.NavigateCommand.Execute(page);
         AgentsPage.Visibility = Visibility.Collapsed;
         ProjectsPage.Visibility = Visibility.Collapsed;
         SessionsPage.Visibility = Visibility.Collapsed;

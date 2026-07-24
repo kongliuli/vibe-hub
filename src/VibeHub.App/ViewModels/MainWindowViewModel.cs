@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using VibeHub.Core.Models;
 using VibeHub.Core.Storage;
 
@@ -7,6 +8,33 @@ namespace VibeHub.App.ViewModels;
 
 public sealed partial class MainWindowViewModel : ObservableObject
 {
+    public MainWindowViewModel(
+        WorkspaceViewModel workspace,
+        JobsViewModel jobs,
+        SessionsViewModel sessions,
+        ContextViewModel context)
+    {
+        Workspace = workspace;
+        Jobs = jobs;
+        Sessions = sessions;
+        Context = context;
+    }
+
+    public WorkspaceViewModel Workspace { get; }
+    public JobsViewModel Jobs { get; }
+    public SessionsViewModel Sessions { get; }
+    public ContextViewModel Context { get; }
+
+    [ObservableProperty]
+    private string _currentPage = "workbench";
+
+    [RelayCommand]
+    private void Navigate(string? page)
+    {
+        if (!string.IsNullOrWhiteSpace(page))
+            CurrentPage = page;
+    }
+
     // ponytail: static workbench data proves the MVVM layout; replace each collection when its real service lands.
     public string WorkspaceName => "vibe-hub";
     public string BranchName => "master";
@@ -58,3 +86,8 @@ public sealed record WorkbenchAgent(string ProviderId, string Name, string Statu
 public sealed record WorkbenchActivity(string Title, string Detail, string Time, string Kind);
 public sealed record WorkbenchChange(string Path, string Added, string Removed);
 public sealed record WorkbenchSkill(string Name, string Source, string Targets, string Status, string StatusColor);
+
+public sealed partial class WorkspaceViewModel : ObservableObject;
+public sealed partial class JobsViewModel : ObservableObject;
+public sealed partial class SessionsViewModel : ObservableObject;
+public sealed partial class ContextViewModel : ObservableObject;

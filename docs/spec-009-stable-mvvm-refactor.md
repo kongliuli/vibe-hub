@@ -140,7 +140,7 @@ ViewModel、命令参数和返回值不得出现：
 ### Phase 0：基线、测试与组合根
 
 - 新增 `tests/VibeHub.App.Tests`，目标框架为 `net10.0-windows`，引用 App/Core，沿用现有 xUnit 与 NSubstitute 版本。
-- 记录并测试当前页面/选择状态、Archive 防倒灌、取消与错误语义。
+- 记录并测试当前 Shell 组合、页面状态和既有纯 ViewModel 行为；Archive 防倒灌、取消与错误测试随对应行为迁移时加入，避免为尚未迁移的 WPF 私有逻辑制造测试专用抽象。
 - 建立 `App.OnStartup` 手工组合根；窗口行为保持不变。
 - 先定义四个子 ViewModel 的空壳和所有权，不迁业务。
 

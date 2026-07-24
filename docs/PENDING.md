@@ -65,7 +65,7 @@
 
 设计与验收见 [`spec-009-stable-mvvm-refactor.md`](spec-009-stable-mvvm-refactor.md)。
 
-- [ ] Phase 0：建立 App 测试护栏、手工组合根和四个子 ViewModel 空壳，不启动 WPF/ConPTY/真实 CLI。
+- [x] Phase 0：已建立 App 测试护栏、手工组合根和四个子 ViewModel 空壳；测试不启动 WPF/ConPTY/真实 CLI。
 - [ ] Phase 1：迁移 Workspace（项目、任务、Git、Settings、当前 provider/cwd），作为后续子 ViewModel 的上下文基座。
 - [ ] Phase 2：迁移 Context（Memory/Handoff、Inject、Skills）；Dialog 留在 View。
 - [ ] Phase 3：迁移 Sessions（Archive、Structured、Harvest、Distill、Vault）；保留过期结果防倒灌和独立连接。
